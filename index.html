@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Agendamento de Sala de Reunião</title>
+    
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -290,6 +293,7 @@
                     if (isAdmin && dom.adminPassword) dom.adminPassword.focus();
                     else {
                         currentUserRole = 'user'; // Reseta para usuário se não for admin
+                        if(dom.userRoleSelect) dom.userRoleSelect.value = 'user'; // Volta a seleção para "Usuário"
                         renderAppointments(dom.viewDatePicker.value); // Re-renderiza para esconder botões de admin
                     }
                 });
