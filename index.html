@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agendamento de Sala de Reunião</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style> 
+        body { font-family: 'Inter', sans-serif; } 
+        button:disabled { cursor: not-allowed; opacity: 0.6; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white p-6 md:p-8 rounded-2xl shadow-lg max-w-4xl w-full space-y-6">
+        <div class="flex flex-col items-center">
+            <img src="https://jjesus2022.github.io/Agendamento_Sala/imagem/logo-cerradao.png" alt="Logo Cerradão" class="h-20" onerror="this.onerror=null; this.src='https://placehold.co/180x60/cccccc/ffffff?text=Logo';">
+            <h1 class="text-3xl font-bold text-center text-gray-800 mt-4">Agendamento de Sala de Reunião</h1>
+        </div>
+        
+        <div id="message-container" class="hidden p-4 rounded-lg text-white font-medium text-center transition-opacity duration-300"></div>
+        
+        <div class="grid md:grid-cols-2 gap-8">
+            <div class="bg-gray-50 p-6 rounded-xl border">
+                <h2 class="text-2xl font-bold text-gray-700 mb-6">Agendar Nova Reunião</h2>
+                <form id="appointment-form" class="space-y-4">
+                    <select id="room-select" class="w-full p-3 border rounded-lg bg-white" required></select>
+                    <input type="date" id="appointment-date" class="w-full p-3 border rounded-lg" required>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label for="start-time" class="text-sm font-semibold text-gray-600">Início:</label><input type="time" id="start-time" class="w-full p-3 border rounded-lg" required></div>
+                        <div><label for="end-time" class="text-sm font-semibold text-gray-600">Fim:</label><input type="time" id="end-time" class="w-full p-3 border rounded-lg" required></div>
+                    </div>
+                    <input type="text" id="appointment-title" placeholder="Título da Reunião" class="w-full p-3 border rounded-lg" required>
+                    <input type="text" id="user-name" placeholder="Seu Nome Completo" class="w-full p-3 border rounded-lg" required>
+                    <input type="email" id="user-email" placeholder="Seu E-mail" class="w-full p-3 border rounded-lg" required>
+                    <button type="submit" id="submit-button" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl shadow-md transition-all">
+                        Solicitar Agendamento
+                    </button>
+                </form>
+            </div>
+            
+            <div class="bg-gray-50 p-6 rounded-xl border">
+                <h2 class="text-2xl font-bold text-gray-700 mb-6">Agendamentos para <span id="current-date-display"></span></h2>
+                <div class="flex items-center space-x-2 mb-4">
+                    <label for="user-role-select" class="text-sm font-semibold text-gray-600">Perfil:</label>
+                    <select id="user-role-select" class="p-2 border rounded-lg bg-white"><option value="user">Usuário</option><option value="admin">Admin</option></select>
+                </div>
+                <div id="admin-password-group" class="hidden flex items-center space-x-2 mb-4">
+                    <label for="admin-password" class="text-sm font-semibold text-gray-600">Senha:</label>
+                    <input type="password" id="admin-password" class="p-2 border rounded-lg flex-grow">
+                    <button id="confirm-admin-password" class="bg-gray-700 hover:bg-gray-800 text-white text-xs font-bold py-2 px-3 rounded-lg">OK</button>
+                </div>
+                <div class="flex items-center space-x-2 mb-4">
+                    <label class="text-sm font-semibold text-gray-600">Ver data:</label>
+                    <input type="date" id="view-date-picker" class="p-2 border rounded-lg">
+                </div>
+                <div id="appointments-list" class="space-y-3 max-h-[420px] overflow-y-auto pr-2">
+                    <p class="text-gray-500 text-center">Carregando...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // !!! PASSO MAIS IMPORTANTE: COLE A URL DA SUA API PUBLICADA AQUI !!!
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwxcrMHmCyFULH_Cunsg7E4d8AzYQj29ID84ek8WKuuu8R73NqGQOzyZ4wqzL5Hd8HOrA/exec";
+
+    const ADMIN_PASSWORD = 'admin123'; // Defina a senha do administrador aqui
+    const rooms = [
+        { name: 'Sala 01 (Grande - Treinamentos)' },
+        { name: 'Sala 02 (Média - Antigo PCM)' },
+        { name: 'Sala 03 (Pequena - Frente antigo PCM)' }
+    ];
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const dom = {};
+        const ids = ['room-select', 'appointment-date', 'start-time', 'end-time', 'appointment-title', 'user-name', 'user-email', 'appointment-form', 'appointments-list', 'message-container', 'view-date-picker', 'current-date-display', 'submit-button', 'user-role-select', 'admin-password-group', 'admin-password', 'confirm-admin-password'];
+        ids.forEach(id => { dom[id] = document.getElementById(id); });
+
+        let allAppointments = [];
+        let currentUserRole = 'user';
+
+        // --- FUNÇÕES DE LÓGICA E RENDERIZAÇÃO ---
+        
+        function showMessage(message, type = 'success') {
+            if (!dom.messageContainer) return;
+            dom.messageContainer.textContent = message;
+            dom.messageContainer.className = 'p-4 rounded-lg text-white font-medium text-center transition-opacity duration-300';
+            dom.messageContainer.classList.add(type === 'success' ? 'bg-green-500' : 'bg-red-500');
+            setTimeout(() => { dom.messageContainer.classList.add('hidden'); }, 5000);
+        }
+
+        function populateRoomSelect() {
+            if (!dom.roomSelect) return;
+            dom.roomSelect.innerHTML = '<option value="">Selecione a Sala</option>';
+            rooms.forEach(room => {
+                const option = document.createElement('option');
+                option.value = room.name;
+                option.textContent = room.name;
+                dom.roomSelect.appendChild(option);
+            });
+        }
+
+        function renderAppointments(date) {
+            if (!dom.currentDateDisplay || !dom.appointmentsList) return;
+            dom.currentDateDisplay.textContent = new Date(date + 'T00:00:00').toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+            const dailyAppointments = allAppointments.filter(a => a.data === date).sort((a,b) => a.inicio.localeCompare(b.inicio));
+            
+            dom.appointmentsList.innerHTML = '';
+            if (dailyAppointments.length === 0) {
+                dom.appointmentsList.innerHTML = '<p class="text-gray-500 text-center">Nenhum agendamento para esta data.</p>';
+                return;
+            }
+            dailyAppointments.forEach(appt => {
+                const statusClass = appt.status === 'confirmed' ? 'text-green-600' : appt.status === 'Pendente' ? 'text-yellow-600' : 'text-red-500';
+                const apptElement = document.createElement('div');
+                apptElement.className = 'bg-white p-3 rounded-lg border text-sm space-y-1';
+                
+                let adminButtons = '';
+                if (currentUserRole === 'admin') {
+                    if ((appt.status || 'Pendente').toLowerCase() === 'pendente') {
+                        adminButtons = `<button class="confirm-btn bg-green-500 hover:bg-green-600 text-white text-xs font-bold py-1 px-2 rounded-full" data-id="${appt.timestamp}">Confirmar</button>
+                                      <button class="reject-btn bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-1 px-2 rounded-full" data-id="${appt.timestamp}">Recusar</button>`;
+                    }
+                    adminButtons += `<button class="delete-btn bg-gray-500 hover:bg-gray-600 text-white text-xs font-bold py-1 px-2 rounded-full ml-auto" data-id="${appt.timestamp}">Excluir</button>`;
+                }
+
+                apptElement.innerHTML = `<p class="font-bold text-gray-800">${appt.titulo}</p>
+                    <p class="text-gray-600">${appt.sala}</p>
+                    <p class="text-gray-600">${appt.inicio} - ${appt.fim}</p>
+                    <p class="font-semibold ${statusClass}">${appt.status || 'Pendente'}</p>
+                    <p class="text-xs text-gray-400">Por: ${appt.nome}</p>
+                    ${adminButtons ? `<div class="flex items-center space-x-2 pt-2">${adminButtons}</div>` : ''}`;
+                dom.appointmentsList.appendChild(apptElement);
+            });
+        }
+        
+        async function fetchAndRender(date) {
+            if (!dom.appointmentsList) return;
+            dom.appointmentsList.innerHTML = '<p class="text-gray-500 text-center">Carregando...</p>';
+            try {
+                if (SCRIPT_URL === "COLE_A_SUA_URL_AQUI") throw new Error('URL da API não configurada.');
+                const response = await fetch(SCRIPT_URL);
+                if (!response.ok) throw new Error('Falha na conexão.');
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+                allAppointments = data;
+                renderAppointments(date);
+            } catch(error) { 
+                showMessage(error.message, 'error'); 
+                dom.appointmentsList.innerHTML = `<p class="text-red-500 font-semibold text-center">Falha ao carregar dados.</p>`;
+            }
+        }
+
+        async function postDataAndRefresh(payload) {
+            if (!dom.submitButton) return;
+            dom.submitButton.disabled = true;
+            try {
+                const response = await fetch(SCRIPT_URL, { method: 'POST', mode: 'cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error('Falha ao enviar. Verifique a rede e a URL da API.');
+                const result = await response.json();
+                if (result.result !== 'success') throw new Error(result.error);
+                await fetchAndRender(dom.viewDatePicker.value);
+            } catch (error) {
+                showMessage(error.message, 'error');
+            } finally {
+                dom.submitButton.disabled = false;
+            }
+        }
+
+        // --- INICIALIZAÇÃO E EVENTOS ---
+        function setupEventListeners() {
+            if (dom.appointmentForm) {
+                dom.appointmentForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const payload = { roomName: dom.roomSelect.value, date: dom.appointmentDate.value, startTime: dom.startTime.value, endTime: dom.endTime.value, title: dom.appointmentTitle.value, userName: dom.userName.value, userEmail: dom.userEmail.value };
+                    await postDataAndRefresh(payload);
+                    showMessage('Solicitação enviada!', 'success');
+                    dom.appointmentForm.reset();
+                    dom.appointmentDate.value = payload.date;
+                });
+            }
+
+            if (dom.appointmentsList) {
+                dom.appointmentsList.addEventListener('click', async (e) => {
+                    const button = e.target.closest('button[data-id]');
+                    if (!button) return;
+                    const id = button.dataset.id;
+                    const appt = allAppointments.find(a => a.timestamp == id);
+                    if (!appt) return;
+                    let payload;
+                    if (button.classList.contains('confirm-btn')) payload = { action: 'updateStatus', appointmentId: id, newStatus: 'confirmed', ...appt };
+                    else if (button.classList.contains('reject-btn')) payload = { action: 'updateStatus', appointmentId: id, newStatus: 'rejected', ...appt };
+                    else if (button.classList.contains('delete-btn')) {
+                        if (!confirm('Excluir este agendamento?')) return;
+                        payload = { action: 'deleteAppointment', appointmentId: id };
+                    }
+                    if (payload) await postDataAndRefresh(payload);
+                });
+            }
+            
+            if (dom.viewDatePicker) dom.viewDatePicker.addEventListener('change', (e) => renderAppointments(e.target.value));
+            
+            if (dom.userRoleSelect) {
+                dom.userRoleSelect.addEventListener('change', (e) => {
+                    const isAdmin = e.target.value === 'admin';
+                    if (dom.adminPasswordGroup) dom.adminPasswordGroup.classList.toggle('hidden', !isAdmin);
+                    if (isAdmin && dom.adminPassword) dom.adminPassword.focus();
+                    else {
+                        currentUserRole = 'user';
+                        renderAppointments(dom.viewDatePicker.value);
+                    }
+                });
+            }
+            
+            if (dom.confirmAdminPasswordBtn) {
+                dom.confirmAdminPasswordBtn.addEventListener('click', () => {
+                    if (dom.adminPassword.value === ADMIN_PASSWORD) {
+                        currentUserRole = 'admin';
+                        showMessage('Login de Administrador OK!', 'success');
+                    } else {
+                        currentUserRole = 'user';
+                        if(dom.userRoleSelect) dom.userRoleSelect.value = 'user';
+                        showMessage('Senha incorreta.', 'error');
+                    }
+                    if (dom.adminPassword) dom.adminPassword.value = '';
+                    if (dom.adminPasswordGroup) dom.adminPasswordGroup.classList.add('hidden');
+                    renderAppointments(dom.viewDatePicker.value);
+                });
+            }
+        }
+
+        function init() {
+            const today = new Date(new Date().getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().split("T")[0];
+            if (dom.appointmentDate) dom.appointmentDate.value = today;
+            if (dom.viewDatePicker) dom.viewDatePicker.value = today;
+            
+            populateRoomSelect();
+            setupEventListeners();
+            fetchAndRender(today);
+        }
+
+        init();
+    });
+</script>
+</body>
+</html>
