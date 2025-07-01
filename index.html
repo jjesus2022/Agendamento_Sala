@@ -27,6 +27,55 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        /* Estilos para o modal de confirmação */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+        .modal-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        .modal-buttons button {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .modal-buttons .confirm-button {
+            background-color: #ef4444; /* red-500 */
+            color: white;
+        }
+        .modal-buttons .confirm-button:hover {
+            background-color: #dc2626; /* red-600 */
+        }
+        .modal-buttons .cancel-button {
+            background-color: #e5e7eb; /* gray-200 */
+            color: #374151; /* gray-700 */
+        }
+        .modal-buttons .cancel-button:hover {
+            background-color: #d1d5db; /* gray-300 */
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
@@ -80,38 +129,91 @@
         </div>
     </div>
 
-<script>
-    // !!! IMPORTANTE: COLOQUE A URL DA SUA API PUBLICADA AQUI !!!
-    // Esta URL é gerada quando você implanta seu Google Apps Script como um aplicativo da web.
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxjVNIQpAzy3jR3eLw-9ebA_LIHkoyt-GwwyA8BSZJLxh7g0tn9Ov4ZuWRNPHhzjBivSg/exec";
+    <div id="custom-confirm-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <p id="modal-message" class="text-lg text-gray-800 mb-4"></p>
+            <div class="modal-buttons">
+                <button id="modal-confirm-button" class="confirm-button">Confirmar</button>
+                <button id="modal-cancel-button" class="cancel-button">Cancelar</button>
+            </div>
+        </div>
+    </div>
 
-    // !!! A senha do ADMIN agora será verificada SOMENTE no Google Apps Script (backend) !!!
-    // Esta variável no frontend é APENAS para o comportamento visual de esconder/mostrar botões.
-    // NUNCA coloque senhas sensíveis diretamente no código do frontend em produção.
-    const ADMIN_PASSWORD_PLACEHOLDER = 'admin123'; // Use a mesma senha definida no backend para simular o "login" visual.
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
-    const rooms = [
-        { name: 'Sala 01 (Grande - Treinamentos)' },
-        { name: 'Sala 02 (Média - Antigo PCM)' },
-        { name: 'Sala 03 (Pequena - Frente antigo PCM)' }
-    ];
+    <script>
+        // Configuração do seu projeto Firebase. SUBSTITUA PELOS SEUS DADOS!
+        const firebaseConfig = {
+            apiKey: "AIzaSyDFk1-zfqVr6-2gkXtYI4Ghkxjjj-VjIsw0", // Substitua pelo seu apiKey
+            authDomain: "agendamentos-cafc1.firebaseapp.com", // Substitua pelo seu authDomain
+            projectId: "agendamentos-cafc1", // Substitua pelo seu projectId
+            storageBucket: "agendamentos-cafc1.firebasestorage.app", // Substitua pelo seu storageBucket
+            messagingSenderId: "892824959903", // Substitua pelo seu messagingSenderId
+            appId: "1:892824959903:web:85f0c9698922910390dbaa", // Substitua pelo seu appId
+            measurementId: "G-Z2V7VCN390" // Substitua pelo seu measurementId (opcional)
+        };
 
-    document.addEventListener('DOMContentLoaded', () => {
+        // Inicializa o Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore(); // Obtém a instância do Firestore
+
+        // --- VARIÁVEIS GLOBAIS E ELEMENTOS DO DOM ---
+        const rooms = [
+            { name: 'Sala 01 (Grande - Treinamentos)' },
+            { name: 'Sala 02 (Média - Antigo PCM)' },
+            { name: 'Sala 03 (Pequena - Frente antigo PCM)' }
+        ];
+
         const dom = {};
-        const ids = ['room-select', 'appointment-date', 'start-time', 'end-time', 'appointment-title', 'user-name', 'user-email', 'appointment-form', 'appointments-list', 'message-container', 'view-date-picker', 'current-date-display', 'submit-button', 'user-role-select', 'admin-password-group', 'admin-password', 'confirm-admin-password'];
+        const ids = ['room-select', 'appointment-date', 'start-time', 'end-time', 'appointment-title', 'user-name', 'user-email', 'appointment-form', 'appointments-list', 'message-container', 'view-date-picker', 'current-date-display', 'submit-button', 'user-role-select', 'admin-password-group', 'admin-password', 'confirm-admin-password', 'custom-confirm-modal', 'modal-message', 'modal-confirm-button', 'modal-cancel-button'];
         ids.forEach(id => { dom[id] = document.getElementById(id); });
 
         let allAppointments = [];
         let currentUserRole = 'user'; // 'user' ou 'admin' (controlado pelo input de senha simulado)
 
+        // ATENÇÃO: Esta senha é APENAS para o comportamento visual do frontend.
+        // A segurança real (para quem pode confirmar/deletar) deve ser feita com Firebase Security Rules e/ou Cloud Functions.
+        const ADMIN_PASSWORD_PLACEHOLDER = 'admin123'; 
+
+        // --- FUNÇÃO PARA MODAL DE CONFIRMAÇÃO PERSONALIZADO ---
+        function customConfirm(message) {
+            return new Promise((resolve) => {
+                if (!dom.customConfirmModal || !dom.modalMessage || !dom.modalConfirmButton || !dom.modalCancelButton) {
+                    console.error("Elementos do modal não encontrados.");
+                    resolve(window.confirm(message)); // Fallback para confirm nativo
+                    return;
+                }
+
+                dom.modalMessage.textContent = message;
+                dom.customConfirmModal.classList.remove('hidden');
+
+                const confirmHandler = () => {
+                    dom.customConfirmModal.classList.add('hidden');
+                    dom.modalConfirmButton.removeEventListener('click', confirmHandler);
+                    dom.modalCancelButton.removeEventListener('click', cancelHandler);
+                    resolve(true);
+                };
+
+                const cancelHandler = () => {
+                    dom.customConfirmModal.classList.add('hidden');
+                    dom.modalConfirmButton.removeEventListener('click', confirmHandler);
+                    dom.modalCancelButton.removeEventListener('click', cancelHandler);
+                    resolve(false);
+                };
+
+                dom.modalConfirmButton.addEventListener('click', confirmHandler);
+                dom.modalCancelButton.addEventListener('click', cancelHandler);
+            });
+        }
+
         // --- FUNÇÕES DE LÓGICA E RENDERIZAÇÃO ---
-        
         function showMessage(message, type = 'success', duration = 5000) {
             if (!dom.messageContainer) return;
             dom.messageContainer.textContent = message;
             dom.messageContainer.className = 'p-4 rounded-lg text-white font-medium text-center transition-opacity duration-300';
             dom.messageContainer.classList.add(type === 'success' ? 'bg-green-500' : 'bg-red-500');
-            dom.messageContainer.classList.remove('hidden'); // Garante que a mensagem é visível
+            dom.messageContainer.classList.remove('hidden');
             setTimeout(() => { dom.messageContainer.classList.add('hidden'); }, duration);
         }
 
@@ -129,7 +231,10 @@
         function renderAppointments(date) {
             if (!dom.currentDateDisplay || !dom.appointmentsList) return;
             dom.currentDateDisplay.textContent = new Date(date + 'T00:00:00').toLocaleDateString('pt-BR', { timeZone: 'UTC' });
-            const dailyAppointments = allAppointments.filter(a => a.data === date).sort((a,b) => a.inicio.localeCompare(b.inicio));
+            // Filtra e ordena os agendamentos para a data selecionada
+            const dailyAppointments = allAppointments
+                .filter(a => a.data === date)
+                .sort((a,b) => a.inicio.localeCompare(b.inicio));
             
             dom.appointmentsList.innerHTML = '';
             if (dailyAppointments.length === 0) {
@@ -142,12 +247,13 @@
                 apptElement.className = 'bg-white p-3 rounded-lg border text-sm space-y-1';
                 
                 let adminButtons = '';
+                // Mostra botões de admin apenas se o modo admin estiver ativado no frontend
                 if (currentUserRole === 'admin') {
                     if ((appt.status || 'Pendente').toLowerCase() === 'pendente') {
-                        adminButtons = `<button class="confirm-btn bg-green-500 hover:bg-green-600 text-white text-xs font-bold py-1 px-2 rounded-full" data-id="${appt.timestamp}">Confirmar</button>
-                                        <button class="reject-btn bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-1 px-2 rounded-full" data-id="${appt.timestamp}">Recusar</button>`;
+                        adminButtons = `<button class="confirm-btn bg-green-500 hover:bg-green-600 text-white text-xs font-bold py-1 px-2 rounded-full" data-id="${appt.id}">Confirmar</button>
+                                        <button class="reject-btn bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-1 px-2 rounded-full" data-id="${appt.id}">Recusar</button>`;
                     }
-                    adminButtons += `<button class="delete-btn bg-gray-500 hover:bg-gray-600 text-white text-xs font-bold py-1 px-2 rounded-full ml-auto" data-id="${appt.timestamp}">Excluir</button>`;
+                    adminButtons += `<button class="delete-btn bg-gray-500 hover:bg-gray-600 text-white text-xs font-bold py-1 px-2 rounded-full ml-auto" data-id="${appt.id}">Excluir</button>`;
                 }
 
                 apptElement.innerHTML = `<p class="font-bold text-gray-800">${appt.titulo}</p>
@@ -160,50 +266,110 @@
             });
         }
         
-        async function fetchAndRender(date) {
+        // Função para buscar e renderizar agendamentos do Firestore
+        async function fetchAndRenderAppointments(date) {
             if (!dom.appointmentsList) return;
             dom.appointmentsList.innerHTML = '<p class="text-gray-500 text-center flex items-center justify-center"><span class="loading-spinner"></span> Carregando...</p>';
             try {
-                const response = await fetch(SCRIPT_URL);
-                if (!response.ok) throw new Error('Falha na conexão com a API. Verifique a URL e a publicação do script.');
-                const data = await response.json();
-                if (data.error) throw new Error(data.error);
-                allAppointments = data;
+                // Obtém todos os agendamentos para a data selecionada na coleção 'agendamentos'
+                const appointmentsRef = db.collection('agendamentos');
+                const querySnapshot = await appointmentsRef.where('data', '==', date).get();
+                
+                allAppointments = querySnapshot.docs.map(doc => ({
+                    id: doc.id, // O ID único do documento no Firestore
+                    ...doc.data() // Todos os outros campos do documento
+                }));
+                
                 renderAppointments(date);
             } catch(error) { 
-                showMessage(error.message, 'error', 10000); // Erros de API ficam mais tempo
+                showMessage(`Erro ao carregar agendamentos: ${error.message}`, 'error', 10000);
                 dom.appointmentsList.innerHTML = `<p class="text-red-500 font-semibold text-center">Falha ao carregar dados: ${error.message}</p>`;
             }
         }
 
-        async function postDataAndRefresh(payload) {
+        // Função para criar um novo agendamento no Firestore
+        async function createAppointmentInFirestore(payload) {
             if (!dom.submitButton) return;
             const originalButtonText = dom.submitButton.innerHTML;
             dom.submitButton.disabled = true;
-            dom.submitButton.innerHTML = '<span class="loading-spinner"></span> Enviando...'; // Feedback visual
+            dom.submitButton.innerHTML = '<span class="loading-spinner"></span> Enviando...';
 
             try {
-                // Ao enviar dados para o Google Apps Script, 'text/plain' é recomendado para evitar problemas de CORS
-                const response = await fetch(SCRIPT_URL, { method: 'POST', mode: 'cors', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(payload) });
-                
-                if (!response.ok) throw new Error('Falha ao enviar dados. Verifique a rede ou a URL da API.');
-                const result = await response.json(); // O Apps Script retorna JSON
+                // Validação de conflito de horário (frontend).
+                // Para uma validação mais robusta e segura (especialmente em ambientes multiusuário),
+                // considere implementar essa lógica em uma Firebase Cloud Function,
+                // usando transações para garantir a atomicidade.
+                const existingAppointmentsForRoomAndDate = allAppointments.filter(appt => 
+                    appt.sala === payload.roomName && 
+                    appt.data === payload.date &&
+                    (appt.status === 'confirmed' || appt.status === 'Pendente') // Conflitos apenas com confirmados ou pendentes
+                );
 
-                if (result.status === 'error') { // A API do Apps Script pode retornar 'status: error'
-                    throw new Error(result.message || 'Erro desconhecido da API.');
+                const newStartTime = payload.startTime;
+                const newEndTime = payload.endTime;
+
+                const hasConflict = existingAppointmentsForRoomAndDate.some(appt => {
+                    return !(newEndTime <= appt.inicio || newStartTime >= appt.fim);
+                });
+
+                if (hasConflict) {
+                    showMessage('Conflito de agendamento! A sala já está ocupada neste horário.', 'error');
+                    return; // Interrompe a execução se houver conflito
                 }
+
+                // Adiciona o novo agendamento ao Firestore
+                await db.collection('agendamentos').add({
+                    sala: payload.roomName,
+                    data: payload.date,
+                    inicio: payload.startTime,
+                    fim: payload.endTime,
+                    titulo: payload.title,
+                    nome: payload.userName,
+                    email: payload.userEmail,
+                    status: 'Pendente', // Status inicial para novos agendamentos
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp() // Timestamp gerado pelo servidor
+                });
                 
-                showMessage(result.message || 'Operação realizada com sucesso!', 'success');
-                await fetchAndRender(dom.viewDatePicker.value); // Atualiza a lista após a operação
+                showMessage('Agendamento solicitado com sucesso! Aguardando confirmação.', 'success');
+                dom.appointmentForm.reset();
+                // Reseta a data do formulário para hoje após o agendamento
+                dom.appointmentDate.value = new Date(new Date().getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().split("T")[0];
+                await fetchAndRenderAppointments(dom.viewDatePicker.value); // Recarrega a lista de agendamentos
             } catch (error) {
-                showMessage(`Erro: ${error.message}`, 'error', 10000); // Mostra o erro retornado pela API
+                showMessage(`Erro ao agendar: ${error.message}`, 'error', 10000);
             } finally {
                 dom.submitButton.disabled = false;
-                dom.submitButton.innerHTML = originalButtonText; // Restaura o texto original do botão
+                dom.submitButton.innerHTML = originalButtonText;
             }
         }
 
-        // --- INICIALIZAÇÃO E EVENTOS ---
+        // Função para atualizar o status de um agendamento no Firestore
+        async function updateAppointmentStatusInFirestore(id, newStatus) {
+            try {
+                // Em uma aplicação real, a autenticação e autorização de admin
+                // seriam verificadas aqui (e nas Regras de Segurança do Firestore)
+                await db.collection('agendamentos').doc(id).update({ status: newStatus });
+                showMessage(`Status do agendamento atualizado para '${newStatus}'.`, 'success');
+                await fetchAndRenderAppointments(dom.viewDatePicker.value); // Recarrega a lista
+            } catch (error) {
+                showMessage(`Erro ao atualizar status: ${error.message}`, 'error', 10000);
+            }
+        }
+
+        // Função para excluir um agendamento do Firestore
+        async function deleteAppointmentFromFirestore(id) {
+            try {
+                // Em uma aplicação real, a autenticação e autorização de admin
+                // seriam verificadas aqui (e nas Regras de Segurança do Firestore)
+                await db.collection('agendamentos').doc(id).delete();
+                showMessage('Agendamento excluído com sucesso.', 'success');
+                await fetchAndRenderAppointments(dom.viewDatePicker.value); // Recarrega a lista
+            } catch (error) {
+                showMessage(`Erro ao excluir agendamento: ${error.message}`, 'error', 10000);
+            }
+        }
+
+        // --- INICIALIZAÇÃO E OUVINTES DE EVENTOS ---
         function setupEventListeners() {
             if (dom.appointmentForm) {
                 dom.appointmentForm.addEventListener('submit', async (e) => {
@@ -219,7 +385,6 @@
                     }
 
                     const payload = { 
-                        action: 'createAppointment', // Indica a ação para o backend
                         roomName: dom.roomSelect.value, 
                         date: dom.appointmentDate.value, 
                         startTime: startTime, 
@@ -228,10 +393,7 @@
                         userName: dom.userName.value, 
                         userEmail: dom.userEmail.value 
                     };
-                    await postDataAndRefresh(payload);
-                    dom.appointmentForm.reset();
-                    // Reseta a data para o dia atual após o agendamento
-                    dom.appointmentDate.value = new Date(new Date().getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().split("T")[0]; 
+                    await createAppointmentInFirestore(payload);
                 });
             }
 
@@ -240,49 +402,29 @@
                     const button = e.target.closest('button[data-id]');
                     if (!button) return;
                     const id = button.dataset.id;
-                    // Use '==' para comparação, pois timestamp do dataset pode ser string e do objeto pode ser number
-                    const appt = allAppointments.find(a => a.timestamp == id); 
-                    if (!appt) return;
-
-                    let payload;
-
-                    if (button.classList.contains('confirm-btn')) {
-                        payload = { 
-                            action: 'updateStatus', 
-                            appointmentId: id, 
-                            newStatus: 'confirmed', 
-                            adminPassword: dom.adminPassword.value // Envia a senha para o backend validar
-                        };
-                    } else if (button.classList.contains('reject-btn')) {
-                        payload = { 
-                            action: 'updateStatus', 
-                            appointmentId: id, 
-                            newStatus: 'rejected', 
-                            adminPassword: dom.adminPassword.value 
-                        };
-                    } else if (button.classList.contains('delete-btn')) {
-                        if (!confirm('Tem certeza que deseja excluir este agendamento? Esta ação é irreversível.')) return;
-                        payload = { 
-                            action: 'deleteAppointment', 
-                            appointmentId: id, 
-                            adminPassword: dom.adminPassword.value 
-                        };
+                    
+                    // Verifica se o modo admin está ativado e a senha visual corresponde
+                    if (currentUserRole !== 'admin' || dom.adminPassword.value !== ADMIN_PASSWORD_PLACEHOLDER) {
+                        showMessage('Para ações de Admin, por favor, insira a senha de Admin e clique em OK.', 'error', 8000);
+                        return;
                     }
 
-                    if (payload) {
-                        // Antes de enviar a ação de admin, verifica se a senha foi digitada no campo.
-                        if (!dom.adminPassword.value) {
-                            showMessage('Para ações de Admin, por favor, insira a senha de Admin e clique em OK.', 'error', 8000);
-                            return;
+                    if (button.classList.contains('confirm-btn')) {
+                        await updateAppointmentStatusInFirestore(id, 'confirmed');
+                    } else if (button.classList.contains('reject-btn')) {
+                        await updateAppointmentStatusInFirestore(id, 'rejected');
+                    } else if (button.classList.contains('delete-btn')) {
+                        const confirmed = await customConfirm('Tem certeza que deseja excluir este agendamento? Esta ação é irreversível.');
+                        if (confirmed) {
+                            await deleteAppointmentFromFirestore(id);
                         }
-                        await postDataAndRefresh(payload);
                     }
                 });
             }
             
             // Quando o usuário seleciona uma nova data no seletor de visualização
             if (dom.viewDatePicker) {
-                dom.viewDatePicker.addEventListener('change', (e) => fetchAndRender(e.target.value));
+                dom.viewDatePicker.addEventListener('change', (e) => fetchAndRenderAppointments(e.target.value));
             }
             
             // Lógica para alternar entre perfil de Usuário e Admin (somente visual no frontend)
@@ -294,7 +436,7 @@
                     else {
                         currentUserRole = 'user'; // Reseta para usuário se não for admin
                         if(dom.userRoleSelect) dom.userRoleSelect.value = 'user'; // Volta a seleção para "Usuário"
-                        renderAppointments(dom.viewDatePicker.value); // Re-renderiza para esconder botões de admin
+                        fetchAndRenderAppointments(dom.viewDatePicker.value); // Re-renderiza para esconder botões de admin
                     }
                 });
             }
@@ -303,7 +445,7 @@
             if (dom.confirmAdminPassword) { 
                 dom.confirmAdminPassword.addEventListener('click', () => {
                     // Esta validação é APENAS para fins visuais no frontend.
-                    // A senha REAL para as ações do Apps Script será enviada em cada payload de admin e verificada no backend.
+                    // A senha REAL para as ações de admin deve ser verificada com Firebase Security Rules e/ou Cloud Functions.
                     if (dom.adminPassword.value === ADMIN_PASSWORD_PLACEHOLDER) { 
                         currentUserRole = 'admin';
                         showMessage('Modo Administrador ativado (visual).', 'success');
@@ -313,7 +455,7 @@
                         showMessage('Senha de Admin incorreta (somente visual).', 'error');
                     }
                     if (dom.adminPasswordGroup) dom.adminPasswordGroup.classList.add('hidden'); // Esconde o campo da senha
-                    renderAppointments(dom.viewDatePicker.value); // Re-renderiza para mostrar/esconder botões de admin
+                    fetchAndRenderAppointments(dom.viewDatePicker.value); // Re-renderiza para mostrar/esconder botões de admin
                 });
             }
         }
@@ -326,11 +468,10 @@
             
             populateRoomSelect(); // Preenche o dropdown de salas
             setupEventListeners(); // Configura todos os ouvintes de eventos
-            fetchAndRender(today); // Carrega os agendamentos para o dia atual ao iniciar
+            fetchAndRenderAppointments(today); // Carrega os agendamentos para o dia atual ao iniciar
         }
 
         init(); // Chama a função de inicialização
-    });
-</script>
+    </script>
 </body>
 </html>
