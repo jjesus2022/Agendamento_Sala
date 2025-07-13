@@ -223,9 +223,16 @@
         // --- CONFIGURAÇÃO ---
         const firebaseConfig = typeof __firebase_config !== 'undefined' 
             ? JSON.parse(__firebase_config) 
-            : { apiKey: "YOUR_API_KEY", authDomain: "YOUR_AUTH_DOMAIN", projectId: "YOUR_PROJECT_ID" }; // Fallback
+            : {
+                apiKey: "AIzaSyDugzVCdr5fmxnoPVb7SKPzJyBunlN--Kg",
+                authDomain: "agendamento-cerradao.firebaseapp.com",
+                projectId: "agendamento-cerradao",
+                storageBucket: "agendamento-cerradao.appspot.com",
+                messagingSenderId: "446686840198",
+                appId: "1:446686840198:web:b5193b9a9030321c211807"
+            };
         
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-meeting-scheduler';
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'agendamento-cerradao';
 
         // ** IMPORTANTE: Defina o email do administrador aqui **
         // Para testar, você pode criar uma conta no seu projeto Firebase (Authentication) e usar o email aqui.
