@@ -81,7 +81,7 @@
         <!-- Cabeçalho -->
         <header class="flex flex-col md:flex-row justify-between items-center mb-6 pb-4 border-b border-gray-200">
             <div class="flex items-center gap-4 mb-4 md:mb-0">
-                <img src="https://storage.googleapis.com/maker-me/uploads/uploaded%3Alogo-cerradao.png-6962c2a5-a4ba-4d00-a870-2885a1040c0a" alt="Logo Cerradão" class="h-12">
+                <img src="https://jjesus2022.github.io/Agendamento_Sala/imagem/logo-cerradao.png" alt="Logo Cerradão" class="h-20" onerror="this.onerror=null; this.src='https://placehold.co/180x60/cccccc/ffffff?text=Logo';">
                 <h1 class="text-2xl md:text-3xl font-bold text-brand-green">Agendamento de Salas</h1>
             </div>
             <div class="flex items-center gap-4">
@@ -169,6 +169,16 @@
             <h2 id="modalTitle" class="text-2xl font-bold mb-6">Novo Agendamento</h2>
             <form id="bookingForm">
                 <input type="hidden" id="bookingId">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label for="requesterNameInput" class="block text-sm font-medium text-gray-700">Nome do Solicitante</label>
+                        <input type="text" id="requesterNameInput" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-green focus:border-brand-green" required>
+                    </div>
+                    <div>
+                        <label for="requesterEmailInput" class="block text-sm font-medium text-gray-700">E-mail do Solicitante</label>
+                        <input type="email" id="requesterEmailInput" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-green focus:border-brand-green" required>
+                    </div>
+                </div>
                 <div class="mb-4">
                     <label for="title" class="block text-sm font-medium text-gray-700">Título da Reunião</label>
                     <input type="text" id="title" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-green focus:border-brand-green" required>
@@ -192,7 +202,8 @@
                     </div>
                 </div>
                  <div id="requesterInfo" class="mb-4 p-3 bg-gray-100 rounded-md hidden">
-                    <p class="text-sm"><span class="font-semibold">Solicitante:</span> <span id="requesterName"></span></p>
+                    <p class="text-sm"><span class="font-semibold">Solicitante:</span> <span id="requesterNameDisplay"></span></p>
+                    <p class="text-sm"><span class="font-semibold">E-mail:</span> <span id="requesterEmailDisplay"></span></p>
                     <p class="text-sm"><span class="font-semibold">Status:</span> <span id="bookingStatus" class="font-bold"></span></p>
                 </div>
                 <div class="flex justify-end items-center gap-4 mt-8">
@@ -263,11 +274,14 @@
             modalTitle: document.getElementById('modalTitle'),
             bookingId: document.getElementById('bookingId'),
             title: document.getElementById('title'),
+            requesterNameInput: document.getElementById('requesterNameInput'),
+            requesterEmailInput: document.getElementById('requesterEmailInput'),
             room: document.getElementById('room'),
             startDate: document.getElementById('startDate'),
             endDate: document.getElementById('endDate'),
             requesterInfo: document.getElementById('requesterInfo'),
-            requesterName: document.getElementById('requesterName'),
+            requesterNameDisplay: document.getElementById('requesterNameDisplay'),
+            requesterEmailDisplay: document.getElementById('requesterEmailDisplay'),
             bookingStatus: document.getElementById('bookingStatus'),
             adminActions: document.getElementById('adminActions'),
             approveBtn: document.getElementById('approveBtn'),
@@ -299,12 +313,9 @@
                 }
 
                 currentUser = user;
-                // CORREÇÃO: Comparação de e-mail robusta (case-insensitive e sem espaços)
                 isAdmin = user ? !user.isAnonymous && user.email?.toLowerCase().trim() === ADMIN_EMAIL.toLowerCase().trim() : false;
 
                 if (user) {
-                    // Usuário está autenticado (seja com email/senha ou anônimo)
-                    // Agora é seguro ouvir o Firestore.
                     const bookingsCol = collection(db, 'artifacts', appId, 'public', 'data', 'bookings');
                     unsubscribeFromBookings = onSnapshot(bookingsCol, (snapshot) => {
                         allBookings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -322,10 +333,8 @@
                 setupUIForRole();
             });
 
-            // Lógica para o primeiro login ao carregar a aplicação
             try {
                 if (!auth.currentUser) {
-                    // Inicia com um login anônimo para obter as permissões de leitura iniciais.
                     await signInAnonymously(auth);
                 }
             } catch (error) {
@@ -370,7 +379,6 @@
         async function handleLogout() {
             try {
                 await signOut(auth);
-                // Após o logout, o onAuthStateChanged irá logar o usuário como anônimo automaticamente
                 showToast("Você saiu com sucesso.");
             } catch (error) {
                 console.error("Erro ao sair:", error);
@@ -437,7 +445,7 @@
             const startTime = booking.start.toDate().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
             bookingEl.className = `booking booking-${booking.room.toLowerCase().replace(/\s+/g, '-')} booking-${booking.status}`;
             bookingEl.textContent = `${startTime} - ${booking.title}`;
-            bookingEl.title = `Sala: ${booking.room}\nStatus: ${booking.status}\nSolicitante: ${booking.requesterName || 'N/A'}`;
+            bookingEl.title = `Sala: ${booking.room}\nSolicitante: ${booking.requesterName}\nStatus: ${booking.status}`;
             bookingEl.dataset.id = booking.id;
             bookingEl.addEventListener('click', () => openBookingModal(booking));
             return bookingEl;
@@ -509,18 +517,23 @@
                 elements.modalTitle.textContent = 'Detalhes do Agendamento';
                 elements.bookingId.value = booking.id;
                 elements.title.value = booking.title;
+                elements.requesterNameInput.value = booking.requesterName || '';
+                elements.requesterEmailInput.value = booking.requesterEmail || '';
                 elements.room.value = booking.room;
                 elements.startDate.value = formatDateTimeForInput(booking.start.toDate());
                 elements.endDate.value = formatDateTimeForInput(booking.end.toDate());
                 
                 elements.requesterInfo.classList.remove('hidden');
-                elements.requesterName.textContent = booking.requesterName || 'Desconhecido';
+                elements.requesterNameDisplay.textContent = booking.requesterName || 'N/A';
+                elements.requesterEmailDisplay.textContent = booking.requesterEmail || 'N/A';
                 elements.bookingStatus.textContent = booking.status;
                 elements.bookingStatus.className = `font-bold text-${getStatusColor(booking.status)}-500`;
 
                 const canEdit = currentUser && !currentUser.isAnonymous && currentUser.uid === booking.requesterId && booking.status === 'pending';
                 
                 elements.title.disabled = !canEdit && !isAdmin;
+                elements.requesterNameInput.disabled = !canEdit && !isAdmin;
+                elements.requesterEmailInput.disabled = !canEdit && !isAdmin;
                 elements.room.disabled = !canEdit && !isAdmin;
                 elements.startDate.disabled = !canEdit && !isAdmin;
                 elements.endDate.disabled = !canEdit && !isAdmin;
@@ -535,9 +548,17 @@
             } else {
                 elements.modalTitle.textContent = 'Novo Agendamento';
                 elements.title.disabled = false;
+                elements.requesterNameInput.disabled = false;
+                elements.requesterEmailInput.disabled = false;
                 elements.room.disabled = false;
                 elements.startDate.disabled = false;
                 elements.endDate.disabled = false;
+
+                // Preenche automaticamente se for admin
+                if (isAdmin) {
+                    elements.requesterNameInput.value = currentUser.displayName || currentUser.email.split('@')[0];
+                    elements.requesterEmailInput.value = currentUser.email;
+                }
             }
 
             openModal(elements.bookingModal);
@@ -589,6 +610,8 @@
 
             const bookingData = {
                 title: elements.title.value,
+                requesterName: elements.requesterNameInput.value,
+                requesterEmail: elements.requesterEmailInput.value,
                 room: elements.room.value,
                 start: Timestamp.fromDate(start),
                 end: Timestamp.fromDate(end),
@@ -602,9 +625,6 @@
                     showToast("Agendamento atualizado com sucesso!");
                 } else {
                     bookingData.requesterId = currentUser.uid;
-                    bookingData.requesterName = currentUser.isAnonymous 
-                        ? `Visitante ${currentUser.uid.substring(0, 5)}` 
-                        : (currentUser.email || `Usuário ${currentUser.uid.substring(0, 5)}`);
                     bookingData.status = 'pending';
                     bookingData.createdAt = serverTimestamp();
                     await addDoc(bookingsCol, bookingData);
@@ -732,15 +752,15 @@
                 return;
             }
 
-            const headers = ['ID', 'Titulo', 'Sala', 'Inicio', 'Fim', 'SolicitanteID', 'SolicitanteNome', 'Status'];
+            const headers = ['ID', 'Titulo', 'Sala', 'Inicio', 'Fim', 'SolicitanteNome', 'SolicitanteEmail', 'Status'];
             const rows = bookingsToExport.map(b => [
                 `"${b.id}"`,
                 `"${b.title}"`,
                 `"${b.room}"`,
                 `"${b.start.toDate().toLocaleString('pt-BR')}"`,
                 `"${b.end.toDate().toLocaleString('pt-BR')}"`,
-                `"${b.requesterId}"`,
                 `"${b.requesterName}"`,
+                `"${b.requesterEmail}"`,
                 `"${b.status}"`
             ]);
 
@@ -778,4 +798,4 @@
 
     </script>
 </body>
-</ht
+</html>
