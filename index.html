@@ -218,25 +218,25 @@
         // Importações do Firebase
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, collection, onSnapshot, doc, addDoc, updateDoc, deleteDoc, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithEmailAndPassword, signOut, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
         // --- CONFIGURAÇÃO ---
-        const firebaseConfig = typeof __firebase_config !== 'undefined' 
-            ? JSON.parse(__firebase_config) 
-            : {
-                apiKey: "AIzaSyDugzVCdr5fmxnoPVb7SKPzJyBunlN--Kg",
-                authDomain: "agendamento-cerradao.firebaseapp.com",
-                projectId: "agendamento-cerradao",
-                storageBucket: "agendamento-cerradao.appspot.com",
-                messagingSenderId: "446686840198",
-                appId: "1:446686840198:web:b5193b9a9030321c211807"
-            };
+        // Forçando o uso da configuração fornecida para garantir a conexão com o projeto correto.
+        const firebaseConfig = {
+            apiKey: "AIzaSyDugzVCdr5fmxnoPVb7SKPzJyBunlN--Kg",
+            authDomain: "agendamento-cerradao.firebaseapp.com",
+            projectId: "agendamento-cerradao",
+            storageBucket: "agendamento-cerradao.appspot.com",
+            messagingSenderId: "446686840198",
+            appId: "1:446686840198:web:b5193b9a9030321c211807"
+        };
         
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'agendamento-cerradao';
+        // Usando o projectId da configuração para consistência.
+        const appId = firebaseConfig.projectId;
 
         // ** IMPORTANTE: Defina o email do administrador aqui **
-        // Para testar, você pode criar uma conta no seu projeto Firebase (Authentication) e usar o email aqui.
-        const ADMIN_EMAIL = 'admin@cerradao.com'; 
+        // Este e-mail deve corresponder a um usuário criado no painel de Autenticação do Firebase.
+        const ADMIN_EMAIL = 'jjesus@cerradao.com.br,jrcesar2022@gmail.com'; 
 
         // --- INICIALIZAÇÃO DO FIREBASE ---
         const app = initializeApp(firebaseConfig);
@@ -302,7 +302,7 @@
                 isAdmin = user ? !user.isAnonymous && user.email === ADMIN_EMAIL : false;
 
                 if (user) {
-                    // Usuário está autenticado (seja com token, email/senha ou anônimo)
+                    // Usuário está autenticado (seja com email/senha ou anônimo)
                     // Agora é seguro ouvir o Firestore.
                     const bookingsCol = collection(db, 'artifacts', appId, 'public', 'data', 'bookings');
                     unsubscribeFromBookings = onSnapshot(bookingsCol, (snapshot) => {
@@ -324,11 +324,9 @@
             // Lógica para o primeiro login ao carregar a aplicação
             try {
                 if (!auth.currentUser) {
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await signInWithCustomToken(auth, __initial_auth_token);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
+                    // Inicia com um login anônimo para obter as permissões de leitura iniciais.
+                    // Isso evita conflitos com tokens de plataforma e permite uma experiência de usuário consistente.
+                    await signInAnonymously(auth);
                 }
             } catch (error) {
                 console.error("Erro na autenticação inicial:", error);
@@ -372,6 +370,7 @@
         async function handleLogout() {
             try {
                 await signOut(auth);
+                // Após o logout, o onAuthStateChanged irá logar o usuário como anônimo automaticamente
                 showToast("Você saiu com sucesso.");
             } catch (error) {
                 console.error("Erro ao sair:", error);
@@ -424,6 +423,7 @@
             return allBookings
                 .filter(b => b.status !== 'rejected')
                 .filter(b => {
+                    if (!b.start) return false;
                     const start = b.start.toDate();
                     return start.getFullYear() === date.getFullYear() &&
                            start.getMonth() === date.getMonth() &&
@@ -489,7 +489,11 @@
                 showToast("Login de administrador bem-sucedido!");
             } catch (error) {
                 console.error("Erro de login:", error.code);
-                showToast("Falha no login. Verifique suas credenciais.", "error");
+                if (error.code === 'auth/operation-not-allowed') {
+                    showToast("Erro: Login por e-mail desabilitado no Firebase.", "error");
+                } else {
+                    showToast("Falha no login. Verifique suas credenciais.", "error");
+                }
             }
         });
 
@@ -694,7 +698,10 @@
         function renderPendingRequests() {
             const pending = allBookings
                 .filter(b => b.status === 'pending')
-                .sort((a, b) => a.createdAt.toDate() - b.createdAt.toDate());
+                .sort((a, b) => {
+                    if (!a.createdAt || !b.createdAt) return 0;
+                    return a.createdAt.toDate() - b.createdAt.toDate()
+                });
             
             elements.pendingRequestsList.innerHTML = '';
             if (pending.length === 0) {
