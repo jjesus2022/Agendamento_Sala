@@ -15,7 +15,7 @@
             --brand-green: #006837;
             --brand-orange: #D47A2A;
             --brand-light-green: #6DC066;
-            --status-pendente: #f59e0b;
+            --status-pending: #f59e0b;
             --status-approved: #10b981;
             --status-rejected: #ef4444;
         }
@@ -45,7 +45,7 @@
         .booking-sala-01 { background-color: var(--brand-green); }
         .booking-sala-02 { background-color: var(--brand-orange); }
         .booking-sala-03 { background-color: var(--brand-light-green); }
-        .booking-pendente { opacity: 0.7; border-left: 3px solid var(--status-pendente); }
+        .booking-pending { opacity: 0.7; border-left: 3px solid var(--status-pending); }
         .booking-approved { border-left: 3px solid var(--status-approved); }
         .booking-rejected { opacity: 0.5; text-decoration: line-through; border-left: 3px solid var(--status-rejected); }
         ::-webkit-scrollbar { width: 8px; }
@@ -197,9 +197,9 @@
         <main class="grid grid-cols-1 lg:grid-cols-4 gap-8">
             <aside id="adminPanel" class="lg:col-span-1 bg-white p-4 rounded-lg shadow-md hidden">
                 <h2 class="text-xl font-bold mb-4 text-brand-orange">Painel do Administrador</h2>
-                <div id="pendenteRequests">
+                <div id="pendingRequests">
                     <h3 class="font-semibold mb-2">Solicitações Pendentes</h3>
-                    <div id="pendenteRequestsList" class="space-y-3 max-h-96 overflow-y-auto pr-2"></div>
+                    <div id="pendingRequestsList" class="space-y-3 max-h-96 overflow-y-auto pr-2"></div>
                 </div>
                  <div class="mt-6">
                     <button id="exportCsvBtn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-transform transform hover:scale-105">Exportar para CSV</button>
@@ -344,7 +344,7 @@
             adminPanel: document.getElementById('adminPanel'),
             calendarColumn: document.getElementById('calendarColumn'),
             calendarBody: document.getElementById('calendarBody'),
-            pendenteRequestsList: document.getElementById('pendenteRequestsList'),
+            pendingRequestsList: document.getElementById('pendingRequestsList'),
             currentMonthYear: document.getElementById('currentMonthYear'),
             bookingModal: document.getElementById('bookingModal'),
             bookingForm: document.getElementById('bookingForm'),
@@ -422,7 +422,7 @@
 
                             if (!isInitialLoad && isAdmin) {
                                 snapshot.docChanges().forEach((change) => {
-                                    if (change.type === "added" && change.doc.data().status === 'pendente') {
+                                    if (change.type === "added" && change.doc.data().status === 'pending') {
                                         const newBooking = change.doc.data();
                                         showDesktopNotification('Nova Solicitação de Sala!', `${newBooking.requesterName} solicitou a "${newBooking.room}".`);
                                     }
@@ -430,7 +430,7 @@
                             }
                             
                             renderCalendar();
-                            if (isAdmin) renderpendenteRequests();
+                            if (isAdmin) renderPendingRequests();
                             isInitialLoad = false;
                         });
                     } else {
@@ -589,7 +589,7 @@
             elements.requesterInfo.classList.add('hidden');
             elements.adminActions.classList.add('hidden');
             elements.saveBtn.classList.remove('hidden');
-            const getStatusColor = (status) => ({ approved: 'green', pendente: 'yellow', rejected: 'red' }[status] || 'gray');
+            const getStatusColor = (status) => ({ approved: 'green', pending: 'yellow', rejected: 'red' }[status] || 'gray');
             const formatDateTime = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
             
             if (booking) {
@@ -606,14 +606,14 @@
                 elements.requesterEmailDisplay.textContent = booking.requesterEmail || 'N/A';
                 elements.bookingStatus.textContent = booking.status;
                 elements.bookingStatus.className = `font-bold text-${getStatusColor(booking.status)}-500`;
-                const canEdit = isAdmin || (currentUser && !currentUser.isAnonymous && currentUser.uid === booking.requesterId && booking.status === 'pendente');
+                const canEdit = isAdmin || (currentUser && !currentUser.isAnonymous && currentUser.uid === booking.requesterId && booking.status === 'pending');
                 const fields = [elements.title, elements.requesterNameInput, elements.requesterEmailInput, elements.room, elements.startDate, elements.endDate];
                 fields.forEach(field => field.disabled = !canEdit);
                 elements.saveBtn.classList.toggle('hidden', !canEdit);
                 if (isAdmin) {
                     elements.adminActions.classList.remove('hidden');
-                    elements.approveBtn.classList.toggle('hidden', booking.status !== 'pendente');
-                    elements.rejectBtn.classList.toggle('hidden', booking.status !== 'pendente');
+                    elements.approveBtn.classList.toggle('hidden', booking.status !== 'pending');
+                    elements.rejectBtn.classList.toggle('hidden', booking.status !== 'pending');
                 }
             } else {
                 elements.modalTitle.textContent = 'Novo Agendamento';
@@ -648,7 +648,7 @@
                     await updateDoc(doc(bookingsCol, id), bookingData);
                     showToast("Agendamento atualizado!");
                 } else {
-                    await addDoc(bookingsCol, { ...bookingData, requesterId: currentUser.uid, status: 'pendente', createdAt: serverTimestamp() });
+                    await addDoc(bookingsCol, { ...bookingData, requesterId: currentUser.uid, status: 'pending', createdAt: serverTimestamp() });
                     showToast("Solicitação de agendamento enviada!");
                 }
                 closeModal(elements.bookingModal);
@@ -679,13 +679,13 @@
         elements.rejectBtn.addEventListener('click', () => updateBookingStatus(elements.bookingId.value, 'rejected'));
         elements.deleteBtn.addEventListener('click', () => deleteBooking(elements.bookingId.value));
 
-        function renderpendenteRequests() {
-            const pendente = allBookings.filter(b => b.status === 'pendente').sort((a, b) => (a.createdAt?.toDate() || 0) - (b.createdAt?.toDate() || 0));
-            elements.pendenteRequestsList.innerHTML = pendente.length === 0 ? '<p class="text-sm text-gray-500">Nenhuma solicitação pendente.</p>' : pendente.map(booking => {
+        function renderPendingRequests() {
+            const pending = allBookings.filter(b => b.status === 'pending').sort((a, b) => (a.createdAt?.toDate() || 0) - (b.createdAt?.toDate() || 0));
+            elements.pendingRequestsList.innerHTML = pending.length === 0 ? '<p class="text-sm text-gray-500">Nenhuma solicitação pendente.</p>' : pending.map(booking => {
                 const start = booking.start.toDate();
                 return `<div class="p-3 border rounded-md bg-yellow-50 border-yellow-200 cursor-pointer hover:bg-yellow-100" data-id="${booking.id}"><p class="font-semibold text-sm">${booking.title}</p><p class="text-xs text-gray-600">${booking.room}</p><p class="text-xs text-gray-600">${start.toLocaleDateString('pt-BR')} ${start.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}</p></div>`;
             }).join('');
-            elements.pendenteRequestsList.querySelectorAll('div[data-id]').forEach(el => {
+            elements.pendingRequestsList.querySelectorAll('div[data-id]').forEach(el => {
                 el.addEventListener('click', () => {
                     const booking = allBookings.find(b => b.id === el.dataset.id);
                     if(booking) openBookingModal(booking);
@@ -719,3 +719,4 @@
     </script>
 </body>
 </html>
+
