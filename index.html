@@ -236,7 +236,7 @@
 
         // ** IMPORTANTE: Defina o email do administrador aqui **
         // Este e-mail deve corresponder a um usuário criado no painel de Autenticação do Firebase.
-        const ADMIN_EMAIL = 'jjesus@cerradao.com.br,jrcesar2022@gmail.com'; 
+        const ADMIN_EMAIL = 'jjesus@usinacerradao.com.br'; 
 
         // --- INICIALIZAÇÃO DO FIREBASE ---
         const app = initializeApp(firebaseConfig);
@@ -299,7 +299,8 @@
                 }
 
                 currentUser = user;
-                isAdmin = user ? !user.isAnonymous && user.email === ADMIN_EMAIL : false;
+                // CORREÇÃO: Comparação de e-mail robusta (case-insensitive e sem espaços)
+                isAdmin = user ? !user.isAnonymous && user.email?.toLowerCase().trim() === ADMIN_EMAIL.toLowerCase().trim() : false;
 
                 if (user) {
                     // Usuário está autenticado (seja com email/senha ou anônimo)
@@ -325,7 +326,6 @@
             try {
                 if (!auth.currentUser) {
                     // Inicia com um login anônimo para obter as permissões de leitura iniciais.
-                    // Isso evita conflitos com tokens de plataforma e permite uma experiência de usuário consistente.
                     await signInAnonymously(auth);
                 }
             } catch (error) {
@@ -778,4 +778,4 @@
 
     </script>
 </body>
-</html>
+</ht
