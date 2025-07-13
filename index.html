@@ -2,7 +2,6 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="refresh" content="60"> 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Agendamento de Salas de Reunião - Cerradão</title>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -12,14 +11,13 @@
             font-family: 'Inter', sans-serif;
             background-color: #f7fafc;
         }
-        /* Cores personalizadas baseadas no logo */
         :root {
             --brand-green: #006837;
             --brand-orange: #D47A2A;
             --brand-light-green: #6DC066;
-            --status-pending: #f59e0b; /* Ambar */
-            --status-approved: #10b981; /* Esmeralda */
-            --status-rejected: #ef4444; /* Vermelho */
+            --status-pending: #f59e0b;
+            --status-approved: #10b981;
+            --status-rejected: #ef4444;
         }
         .bg-brand-green { background-color: var(--brand-green); }
         .text-brand-green { color: var(--brand-green); }
@@ -27,20 +25,10 @@
         .bg-brand-orange { background-color: var(--brand-orange); }
         .text-brand-orange { color: var(--brand-orange); }
         .bg-brand-light-green { background-color: var(--brand-light-green); }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+        .calendar-day { min-height: 120px; transition: background-color: 0.2s; }
+        .calendar-day:hover { background-color: #f0fdf4; }
         
-        /* Estilos para o calendário */
-        .calendar-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 4px;
-        }
-        .calendar-day {
-            min-height: 120px;
-            transition: background-color: 0.2s;
-        }
-        .calendar-day:hover {
-            background-color: #f0fdf4;
-        }
         .booking {
             font-size: 0.75rem;
             padding: 2px 6px;
@@ -51,67 +39,64 @@
             text-overflow: ellipsis;
             white-space: nowrap;
             cursor: pointer;
+            /* REGRA ADICIONADA: Limita a largura para forçar a quebra de texto */
+            max-width: 90px;
         }
-        /* Cores das salas */
+
         .booking-sala-01 { background-color: var(--brand-green); }
         .booking-sala-02 { background-color: var(--brand-orange); }
         .booking-sala-03 { background-color: var(--brand-light-green); }
-
-        /* Estilo para status */
         .booking-pending { opacity: 0.7; border-left: 3px solid var(--status-pending); }
         .booking-approved { border-left: 3px solid var(--status-approved); }
         .booking-rejected { opacity: 0.5; text-decoration: line-through; border-left: 3px solid var(--status-rejected); }
-
-        /* Scrollbar customizada */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #aaa; }
-
-        /* Modal */
-        .modal {
-            transition: opacity 0.3s ease;
+        .modal { transition: opacity 0.3s ease; }
+        
+        #app {
+            display: none;
+        }
+        .loader-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-size: 1.2rem;
+            color: #333;
         }
     </style>
 </head>
 <body class="text-gray-800">
 
+    <div id="loader" class="loader-container">
+        <p>Carregando sistema de agendamento...</p>
+    </div>
+
     <div id="app" class="min-h-screen p-4 md:p-8">
-        
         <header class="flex flex-col md:flex-row justify-between items-center mb-6 pb-4 border-b border-gray-200">
             <div class="flex items-center gap-4 mb-4 md:mb-0">
                 <img src="logo-cerradao.png" alt="Logo Cerradão" style="height:100px;">
             </div>
             <h1 class="text-2xl md:text-3xl font-bold text-brand-green text-center flex-1">Agendamento de Salas de Reunião</h1>
             <div class="flex items-center gap-4">
-                <div id="userInfo" class="text-right text-sm">
-                    <p>Carregando...</p>
-                </div>
-                <button id="adminLoginBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg transition-colors">
-                    Login Admin
-                </button>
-                <button id="newBookingBtn" class="bg-brand-green hover:bg-opacity-90 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-transform transform hover:scale-105">
-                    + Agendar Sala
-                </button>
+                <div id="userInfo" class="text-right text-sm"></div>
+                <button id="adminLoginBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg transition-colors">Login Admin</button>
+                <button id="newBookingBtn" class="bg-brand-green hover:bg-opacity-90 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-transform transform hover:scale-105">+ Agendar Sala</button>
             </div>
         </header>
-
         <main class="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            
             <aside id="adminPanel" class="lg:col-span-1 bg-white p-4 rounded-lg shadow-md hidden">
                 <h2 class="text-xl font-bold mb-4 text-brand-orange">Painel do Administrador</h2>
                 <div id="pendingRequests">
                     <h3 class="font-semibold mb-2">Solicitações Pendentes</h3>
-                    <div id="pendingRequestsList" class="space-y-3 max-h-96 overflow-y-auto pr-2">
-                    </div>
+                    <div id="pendingRequestsList" class="space-y-3 max-h-96 overflow-y-auto pr-2"></div>
                 </div>
                  <div class="mt-6">
-                    <button id="exportCsvBtn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-transform transform hover:scale-105">
-                        Exportar para CSV
-                    </button>
+                    <button id="exportCsvBtn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-transform transform hover:scale-105">Exportar para CSV</button>
                 </div>
             </aside>
-
             <div class="col-span-1 lg:col-span-4" id="calendarColumn">
                 <div class="bg-white p-6 rounded-lg shadow-lg">
                     <div class="flex justify-between items-center mb-4">
@@ -119,7 +104,6 @@
                         <h2 id="currentMonthYear" class="text-xl font-bold text-center"></h2>
                         <button id="nextMonthBtn" class="p-2 rounded-full hover:bg-gray-100">&gt;</button>
                     </div>
-                    
                     <div class="calendar-grid border-t border-l border-gray-200">
                         <div class="text-center font-bold p-2 border-r border-b bg-gray-50">Dom</div>
                         <div class="text-center font-bold p-2 border-r border-b bg-gray-50">Seg</div>
@@ -154,7 +138,6 @@
             </form>
         </div>
     </div>
-
     <div id="bookingModal" class="modal fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 hidden pointer-events-none opacity-0">
         <div class="bg-white rounded-lg shadow-2xl w-full max-w-lg p-8 transform scale-95 transition-transform">
             <h2 id="modalTitle" class="text-2xl font-bold mb-6">Novo Agendamento</h2>
@@ -209,7 +192,6 @@
             </form>
         </div>
     </div>
-    
     <div id="toast" class="fixed bottom-5 right-5 bg-gray-800 text-white py-3 px-6 rounded-lg shadow-lg opacity-0 transition-opacity duration-300">
         <p id="toastMessage"></p>
     </div>
@@ -217,12 +199,10 @@
     <audio id="notificationSound" src="https://freesound.org/data/previews/157/157219_2158733-lq.mp3" preload="auto"></audio>
 
     <script type="module">
-        // Importações do Firebase
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, collection, onSnapshot, doc, addDoc, updateDoc, deleteDoc, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, setPersistence, browserLocalPersistence, signInAnonymously, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-        // --- CONFIGURAÇÃO ---
         const firebaseConfig = {
             apiKey: "AIzaSyDugzVCdr5fmxnoPVb7SKPzJyBunlN--Kg",
             authDomain: "agendamento-cerradao.firebaseapp.com",
@@ -231,24 +211,21 @@
             messagingSenderId: "446686840198",
             appId: "1:446686840198:web:b5193b9a9030321c211807"
         };
-        const appId = firebaseConfig.projectId;
-        const ADMIN_EMAIL = 'jjesus@usinacerradao.com.br';
-
-        // --- INICIALIZAÇÃO DO FIREBASE ---
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
+        const ADMIN_EMAIL = 'jjesus@usinacerradao.com.br';
 
-        // --- ESTADO DA APLICAÇÃO ---
         let currentUser = null;
         let isAdmin = false;
         let currentDate = new Date();
         let allBookings = [];
         let unsubscribeFromBookings = null;
-        let isInitialLoad = true; // Flag para controlar a carga inicial
+        let isInitialLoad = true;
 
-        // --- ELEMENTOS DO DOM ---
         const elements = {
+            loader: document.getElementById('loader'),
+            appDiv: document.getElementById('app'),
             userInfo: document.getElementById('userInfo'),
             adminPanel: document.getElementById('adminPanel'),
             calendarColumn: document.getElementById('calendarColumn'),
@@ -290,7 +267,6 @@
             notificationSound: document.getElementById('notificationSound'),
         };
 
-        // --- FUNÇÕES DE NOTIFICAÇÃO ---
         function playNotificationSound() {
             elements.notificationSound.currentTime = 0;
             elements.notificationSound.play().catch(error => console.log("A reprodução de áudio foi bloqueada pelo navegador.", error));
@@ -301,7 +277,6 @@
                 console.log("Este navegador não suporta notificações de desktop.");
                 return;
             }
-
             if (Notification.permission === "granted") {
                 new Notification(title, { body, icon: './logo-cerradao.png' });
                 playNotificationSound();
@@ -315,102 +290,70 @@
             }
         }
 
-        // --- AUTENTICAÇÃO E INICIALIZAÇÃO DA APLICAÇÃO ---
         async function initializeAppAndAuth() {
-            onAuthStateChanged(auth, (user) => {
-                if (unsubscribeFromBookings) {
-                    unsubscribeFromBookings();
-                    unsubscribeFromBookings = null;
-                }
+            try {
+                await setPersistence(auth, browserLocalPersistence);
+                onAuthStateChanged(auth, async (user) => {
+                    if (unsubscribeFromBookings) unsubscribeFromBookings();
 
-                currentUser = user;
-                const wasAdmin = isAdmin; // Guarda o estado anterior
-                isAdmin = user ? !user.isAnonymous && user.email?.toLowerCase().trim() === ADMIN_EMAIL.toLowerCase().trim() : false;
+                    currentUser = user;
+                    const wasAdmin = isAdmin;
+                    isAdmin = user ? !user.isAnonymous && user.email?.toLowerCase().trim() === ADMIN_EMAIL.toLowerCase().trim() : false;
 
-                // Se o usuário acabou de se tornar admin, pede permissão para notificações
-                if (isAdmin && !wasAdmin) {
-                    if (Notification.permission === 'default') {
+                    if (isAdmin && !wasAdmin && Notification.permission === 'default') {
                         showDesktopNotification('Notificações Ativadas', 'Você será notificado sobre novas solicitações.');
                     }
-                }
 
-                if (user) {
-                    const bookingsCol = collection(db, 'artifacts', appId, 'public', 'data', 'bookings');
+                    if (user) {
+                        const bookingsCol = collection(db, 'artifacts', firebaseConfig.projectId, 'public', 'data', 'bookings');
+                        unsubscribeFromBookings = onSnapshot(bookingsCol, (snapshot) => {
+                            allBookings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                            if (!isInitialLoad && isAdmin) {
+                                snapshot.docChanges().forEach((change) => {
+                                    if (change.type === "added" && change.doc.data().status === 'pending') {
+                                        const newBooking = change.doc.data();
+                                        showDesktopNotification('Nova Solicitação de Sala!', `${newBooking.requesterName} solicitou a "${newBooking.room}".`);
+                                    }
+                                });
+                            }
+                            
+                            renderCalendar();
+                            if (isAdmin) renderPendingRequests();
+                            isInitialLoad = false;
+                        });
+                    } else {
+                        await signInAnonymously(auth);
+                    }
                     
-                    unsubscribeFromBookings = onSnapshot(bookingsCol, (snapshot) => {
-                        allBookings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    updateUserInfo();
+                    setupUIForRole();
 
-                        // Lógica para notificar APENAS sobre novos agendamentos
-                        if (!isInitialLoad) {
-                            snapshot.docChanges().forEach((change) => {
-                                if (isAdmin && change.type === "added" && change.doc.data().status === 'pending') {
-                                    const newBooking = change.doc.data();
-                                    showDesktopNotification(
-                                        'Nova Solicitação de Sala!',
-                                        `${newBooking.requesterName} solicitou a "${newBooking.room}" para "${newBooking.title}".`
-                                    );
-                                }
-                            });
-                        }
-                        
-                        renderCalendar();
-                        if (isAdmin) {
-                            renderPendingRequests();
-                        }
-                        
-                        isInitialLoad = false;
-
-                    }, (error) => {
-                        console.error("Erro no listener do Firestore:", error);
-                        elements.calendarBody.innerHTML = `<p class="text-red-500 p-4">Erro ao carregar agendamentos.</p>`;
-                    });
-                }
-                
-                updateUserInfo();
-                setupUIForRole();
-            });
-
-            try {
-                if (!auth.currentUser) {
-                    await signInAnonymously(auth);
-                }
+                    elements.loader.style.display = 'none';
+                    elements.appDiv.style.display = 'block';
+                });
             } catch (error) {
-                console.error("Erro na autenticação inicial:", error);
-                elements.userInfo.innerHTML = `<p class="text-red-500">Falha na autenticação inicial.</p>`;
+                console.error("Erro na inicialização ou persistência:", error);
+                elements.loader.innerHTML = `<p class="text-red-500">Erro ao carregar o sistema. Verifique o console.</p>`;
             }
         }
-        
+
         function updateUserInfo() {
             if (isAdmin) {
-                elements.userInfo.innerHTML = `
-                    <div>
-                        <p class="font-semibold">${currentUser.email}</p>
-                        <button id="logoutBtn" class="text-xs text-red-500 hover:underline">Sair</button>
-                    </div>
-                `;
+                elements.userInfo.innerHTML = `<div><p class="font-semibold">${currentUser.email}</p><button id="logoutBtn" class="text-xs text-red-500 hover:underline">Sair</button></div>`;
                 document.getElementById('logoutBtn').addEventListener('click', handleLogout);
             } else if (currentUser) {
-                 elements.userInfo.innerHTML = `
-                    <p class="font-semibold">Visitante</p>
-                    <p class="text-xs text-gray-500 truncate" title="${currentUser.uid}">Sessão anônima</p>
-                `;
+                elements.userInfo.innerHTML = `<p class="font-semibold">Visitante</p><p class="text-xs text-gray-500 truncate" title="${currentUser.uid}">Sessão anônima</p>`;
             } else {
                 elements.userInfo.innerHTML = `<p>Autenticando...</p>`;
             }
         }
 
         function setupUIForRole() {
-            if (isAdmin) {
-                elements.adminPanel.classList.remove('hidden');
-                elements.calendarColumn.classList.remove('lg:col-span-4');
-                elements.calendarColumn.classList.add('lg:col-span-3');
-                elements.adminLoginBtn.classList.add('hidden');
-            } else {
-                elements.adminPanel.classList.add('hidden');
-                elements.calendarColumn.classList.remove('lg:col-span-3');
-                elements.calendarColumn.classList.add('lg:col-span-4');
-                elements.adminLoginBtn.classList.remove('hidden');
-            }
+            elements.adminPanel.classList.toggle('hidden', !isAdmin);
+            elements.calendarColumn.classList.toggle('lg:col-span-3', isAdmin);
+            elements.calendarColumn.classList.toggle('lg:col-span-4', !isAdmin);
+            elements.adminLoginBtn.classList.toggle('hidden', isAdmin);
         }
 
         async function handleLogout() {
@@ -418,31 +361,24 @@
                 await signOut(auth);
                 showToast("Você saiu com sucesso.");
             } catch (error) {
-                console.error("Erro ao sair:", error);
                 showToast("Erro ao tentar sair.", "error");
             }
         }
         
-        // --- LÓGICA DO CALENDÁRIO ---
         function renderCalendar() {
             elements.calendarBody.innerHTML = '';
             currentDate.setDate(1);
             const month = currentDate.getMonth();
             const year = currentDate.getFullYear();
-
             elements.currentMonthYear.textContent = `${currentDate.toLocaleString('pt-BR', { month: 'long' })} de ${year}`;
-
             const firstDayOfMonth = new Date(year, month, 1).getDay();
             const daysInMonth = new Date(year, month + 1, 0).getDate();
-
             for (let i = 0; i < firstDayOfMonth; i++) {
                 elements.calendarBody.innerHTML += `<div class="calendar-day p-2 border-r border-b bg-gray-50"></div>`;
             }
-
             for (let day = 1; day <= daysInMonth; day++) {
                 const dayEl = document.createElement('div');
                 dayEl.className = 'calendar-day relative p-2 border-r border-b';
-                
                 const date = new Date(year, month, day);
                 const today = new Date();
                 if (date.getDate() === today.getDate() && date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear()) {
@@ -450,75 +386,53 @@
                 } else {
                     dayEl.innerHTML = `<div class="text-sm">${day}</div>`;
                 }
-                
                 const dayBookingsContainer = document.createElement('div');
                 dayBookingsContainer.className = 'mt-6 space-y-1';
-                
-                const dayBookings = allBookings
-                    .filter(b => b.status !== 'rejected')
-                    .filter(b => {
-                        if (!b.start) return false;
-                        const start = b.start.toDate();
-                        return start.getFullYear() === date.getFullYear() &&
-                               start.getMonth() === date.getMonth() &&
-                               start.getDate() === date.getDate();
-                    })
-                    .sort((a, b) => a.start.toDate() - b.start.toDate());
-
+                const dayBookings = allBookings.filter(b => b.status !== 'rejected' && b.start && b.start.toDate().toDateString() === date.toDateString()).sort((a, b) => a.start.toDate() - b.start.toDate());
                 dayBookings.forEach(booking => {
-                    const bookingEl = document.createElement('div');
-                    const startTime = booking.start.toDate().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                    bookingEl.className = `booking booking-${booking.room.toLowerCase().replace(/\s+/g, '-')} booking-${booking.status}`;
-                    bookingEl.textContent = `${startTime} - ${booking.title}`;
-                    bookingEl.title = `Sala: ${booking.room}\nSolicitante: ${booking.requesterName}\nStatus: ${booking.status}`;
-                    bookingEl.dataset.id = booking.id;
-                    bookingEl.addEventListener('click', () => openBookingModal(booking));
+                    const bookingEl = createBookingElement(booking);
                     dayBookingsContainer.appendChild(bookingEl);
                 });
-
                 dayEl.appendChild(dayBookingsContainer);
                 elements.calendarBody.appendChild(dayEl);
             }
         }
 
-        elements.prevMonthBtn.addEventListener('click', () => {
-            currentDate.setMonth(currentDate.getMonth() - 1);
-            renderCalendar();
-        });
+        function createBookingElement(booking) {
+            const bookingEl = document.createElement('div');
+            const startTime = booking.start.toDate().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            bookingEl.className = `booking booking-${booking.room.toLowerCase().replace(/\s+/g, '-')} booking-${booking.status}`;
+            bookingEl.textContent = `${startTime} - ${booking.title}`;
+            bookingEl.title = `Sala: ${booking.room}\nSolicitante: ${booking.requesterName}\nStatus: ${booking.status}`;
+            bookingEl.dataset.id = booking.id;
+            bookingEl.addEventListener('click', () => openBookingModal(booking));
+            return bookingEl;
+        }
 
-        elements.nextMonthBtn.addEventListener('click', () => {
-            currentDate.setMonth(currentDate.getMonth() + 1);
-            renderCalendar();
-        });
+        elements.prevMonthBtn.addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() - 1); renderCalendar(); });
+        elements.nextMonthBtn.addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() + 1); renderCalendar(); });
 
-        // --- LÓGICA DOS MODAIS ---
         function openModal(modal) {
             modal.classList.remove('hidden', 'pointer-events-none');
             modal.classList.add('opacity-100');
             modal.querySelector('div').classList.remove('scale-95');
-            modal.querySelector('div').classList.add('scale-100');
         }
 
         function closeModal(modal) {
             modal.classList.add('opacity-0');
             modal.querySelector('div').classList.add('scale-95');
-            setTimeout(() => {
-                modal.classList.add('hidden', 'pointer-events-none');
-            }, 300);
+            setTimeout(() => modal.classList.add('hidden', 'pointer-events-none'), 300);
         }
 
         elements.adminLoginBtn.addEventListener('click', () => openModal(elements.loginModal));
         elements.cancelLoginBtn.addEventListener('click', () => closeModal(elements.loginModal));
         elements.loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const email = elements.email.value;
-            const password = elements.password.value;
             try {
-                await signInWithEmailAndPassword(auth, email, password);
+                await signInWithEmailAndPassword(auth, elements.email.value, elements.password.value);
                 closeModal(elements.loginModal);
                 showToast("Login de administrador bem-sucedido!");
             } catch (error) {
-                console.error("Erro de login:", error.code);
                 showToast("Falha no login. Verifique suas credenciais.", "error");
             }
         });
@@ -529,16 +443,9 @@
             elements.requesterInfo.classList.add('hidden');
             elements.adminActions.classList.add('hidden');
             elements.saveBtn.classList.remove('hidden');
-
-            const getStatusColor = (status) => {
-                switch(status) {
-                    case 'approved': return 'green';
-                    case 'pending': return 'yellow';
-                    case 'rejected': return 'red';
-                    default: return 'gray';
-                }
-            };
-
+            const getStatusColor = (status) => ({ approved: 'green', pending: 'yellow', rejected: 'red' }[status] || 'gray');
+            const formatDateTime = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+            
             if (booking) {
                 elements.modalTitle.textContent = 'Detalhes do Agendamento';
                 elements.bookingId.value = booking.id;
@@ -546,32 +453,26 @@
                 elements.requesterNameInput.value = booking.requesterName || '';
                 elements.requesterEmailInput.value = booking.requesterEmail || '';
                 elements.room.value = booking.room;
-                elements.startDate.value = `${booking.start.toDate().getFullYear()}-${String(booking.start.toDate().getMonth() + 1).padStart(2, '0')}-${String(booking.start.toDate().getDate()).padStart(2, '0')}T${String(booking.start.toDate().getHours()).padStart(2, '0')}:${String(booking.start.toDate().getMinutes()).padStart(2, '0')}`;
-                elements.endDate.value = `${booking.end.toDate().getFullYear()}-${String(booking.end.toDate().getMonth() + 1).padStart(2, '0')}-${String(booking.end.toDate().getDate()).padStart(2, '0')}T${String(booking.end.toDate().getHours()).padStart(2, '0')}:${String(booking.end.toDate().getMinutes()).padStart(2, '0')}`;
-                
+                elements.startDate.value = formatDateTime(booking.start.toDate());
+                elements.endDate.value = formatDateTime(booking.end.toDate());
                 elements.requesterInfo.classList.remove('hidden');
                 elements.requesterNameDisplay.textContent = booking.requesterName || 'N/A';
                 elements.requesterEmailDisplay.textContent = booking.requesterEmail || 'N/A';
                 elements.bookingStatus.textContent = booking.status;
                 elements.bookingStatus.className = `font-bold text-${getStatusColor(booking.status)}-500`;
-
-                const canEdit = currentUser && !currentUser.isAnonymous && currentUser.uid === booking.requesterId && booking.status === 'pending';
-                
+                const canEdit = isAdmin || (currentUser && !currentUser.isAnonymous && currentUser.uid === booking.requesterId && booking.status === 'pending');
                 const fields = [elements.title, elements.requesterNameInput, elements.requesterEmailInput, elements.room, elements.startDate, elements.endDate];
-                fields.forEach(field => field.disabled = !canEdit && !isAdmin);
-                elements.saveBtn.classList.toggle('hidden', !canEdit && !isAdmin);
-
+                fields.forEach(field => field.disabled = !canEdit);
+                elements.saveBtn.classList.toggle('hidden', !canEdit);
                 if (isAdmin) {
                     elements.adminActions.classList.remove('hidden');
                     elements.approveBtn.classList.toggle('hidden', booking.status !== 'pending');
                     elements.rejectBtn.classList.toggle('hidden', booking.status !== 'pending');
                 }
-
             } else {
                 elements.modalTitle.textContent = 'Novo Agendamento';
                 const fields = [elements.title, elements.requesterNameInput, elements.requesterEmailInput, elements.room, elements.startDate, elements.endDate];
                 fields.forEach(field => field.disabled = false);
-
                 if (isAdmin) {
                     elements.requesterNameInput.value = currentUser.displayName || currentUser.email.split('@')[0];
                     elements.requesterEmailInput.value = currentUser.email;
@@ -583,70 +484,36 @@
         elements.newBookingBtn.addEventListener('click', () => openBookingModal());
         elements.cancelBtn.addEventListener('click', () => closeModal(elements.bookingModal));
 
-        // --- OPERAÇÕES NO FIREBASE (CRUD) ---
         elements.bookingForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            if (!currentUser) {
-                showToast("Aguardando autenticação. Tente novamente.", "error");
-                return;
-            }
+            if (!currentUser) return showToast("Aguardando autenticação.", "error");
             const id = elements.bookingId.value;
             const start = new Date(elements.startDate.value);
             const end = new Date(elements.endDate.value);
+            if (end <= start) return showToast("A data de fim deve ser posterior à de início.", "error");
+            if (start.toDateString() !== end.toDateString()) return showToast("O agendamento deve começar e terminar no mesmo dia.", "error");
+            const hasConflict = allBookings.some(b => b.status === 'approved' && b.room === elements.room.value && b.id !== id && Math.max(start, b.start.toDate()) < Math.min(end, b.end.toDate()));
+            if (hasConflict) return showToast("Conflito de horário! Já existe uma reserva aprovada.", "error");
 
-            if (end <= start) {
-                showToast("A data de fim deve ser posterior à data de início.", "error");
-                return;
-            }
-            if (start.toDateString() !== end.toDateString()) {
-                showToast("O agendamento deve começar e terminar no mesmo dia.", "error");
-                return;
-            }
-            
-            const hasConflict = (start, end, room, currentBookingId) => {
-                return allBookings.some(b => 
-                    b.status === 'approved' && 
-                    b.room === room && 
-                    b.id !== currentBookingId &&
-                    Math.max(start, b.start.toDate()) < Math.min(end, b.end.toDate())
-                );
-            };
-
-            if (hasConflict(start, end, elements.room.value, id)) {
-                showToast("Conflito de horário! Já existe uma reserva aprovada.", "error");
-                return;
-            }
-
-            const bookingData = {
-                title: elements.title.value,
-                requesterName: elements.requesterNameInput.value,
-                requesterEmail: elements.requesterEmailInput.value,
-                room: elements.room.value,
-                start: Timestamp.fromDate(start),
-                end: Timestamp.fromDate(end),
-            };
-            
+            const bookingData = { title: elements.title.value, requesterName: elements.requesterNameInput.value, requesterEmail: elements.requesterEmailInput.value, room: elements.room.value, start: Timestamp.fromDate(start), end: Timestamp.fromDate(end) };
             try {
-                const bookingsCol = collection(db, 'artifacts', appId, 'public', 'data', 'bookings');
+                const bookingsCol = collection(db, 'artifacts', firebaseConfig.projectId, 'public', 'data', 'bookings');
                 if (id) {
-                    await updateDoc(doc(db, bookingsCol.path, id), bookingData);
+                    await updateDoc(doc(bookingsCol, id), bookingData);
                     showToast("Agendamento atualizado!");
                 } else {
-                    Object.assign(bookingData, { requesterId: currentUser.uid, status: 'pending', createdAt: serverTimestamp() });
-                    await addDoc(bookingsCol, bookingData);
+                    await addDoc(bookingsCol, { ...bookingData, requesterId: currentUser.uid, status: 'pending', createdAt: serverTimestamp() });
                     showToast("Solicitação de agendamento enviada!");
                 }
                 closeModal(elements.bookingModal);
             } catch (error) {
-                console.error("Erro ao salvar agendamento:", error);
                 showToast("Ocorreu um erro ao salvar.", "error");
             }
         });
 
         const updateBookingStatus = async (id, status) => {
-            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'bookings', id);
             try {
-                await updateDoc(docRef, { status });
+                await updateDoc(doc(db, 'artifacts', firebaseConfig.projectId, 'public', 'data', 'bookings', id), { status });
                 showToast(`Agendamento ${status === 'approved' ? 'aprovado' : 'reprovado'}!`);
                 closeModal(elements.bookingModal);
             } catch (error) {
@@ -656,11 +523,8 @@
 
         const deleteBooking = (id) => {
             if (confirm("Tem certeza que deseja excluir este agendamento?")) {
-                deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bookings', id))
-                    .then(() => {
-                        showToast("Agendamento excluído.");
-                        closeModal(elements.bookingModal);
-                    })
+                deleteDoc(doc(db, 'artifacts', firebaseConfig.projectId, 'public', 'data', 'bookings', id))
+                    .then(() => { showToast("Agendamento excluído."); closeModal(elements.bookingModal); })
                     .catch(() => showToast("Erro ao excluir.", "error"));
             }
         };
@@ -669,25 +533,12 @@
         elements.rejectBtn.addEventListener('click', () => updateBookingStatus(elements.bookingId.value, 'rejected'));
         elements.deleteBtn.addEventListener('click', () => deleteBooking(elements.bookingId.value));
 
-        // --- PAINEL DO ADMINISTRADOR ---
         function renderPendingRequests() {
-            const pending = allBookings
-                .filter(b => b.status === 'pending')
-                .sort((a, b) => (a.createdAt?.toDate() || 0) - (b.createdAt?.toDate() || 0));
-            
-            elements.pendingRequestsList.innerHTML = pending.length === 0 
-                ? '<p class="text-sm text-gray-500">Nenhuma solicitação pendente.</p>'
-                : pending.map(booking => {
-                    const start = booking.start.toDate();
-                    return `
-                        <div class="p-3 border rounded-md bg-yellow-50 border-yellow-200 cursor-pointer hover:bg-yellow-100" data-id="${booking.id}">
-                            <p class="font-semibold text-sm">${booking.title}</p>
-                            <p class="text-xs text-gray-600">${booking.room}</p>
-                            <p class="text-xs text-gray-600">${start.toLocaleDateString('pt-BR')} ${start.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}</p>
-                        </div>
-                    `;
-                }).join('');
-            
+            const pending = allBookings.filter(b => b.status === 'pending').sort((a, b) => (a.createdAt?.toDate() || 0) - (b.createdAt?.toDate() || 0));
+            elements.pendingRequestsList.innerHTML = pending.length === 0 ? '<p class="text-sm text-gray-500">Nenhuma solicitação pendente.</p>' : pending.map(booking => {
+                const start = booking.start.toDate();
+                return `<div class="p-3 border rounded-md bg-yellow-50 border-yellow-200 cursor-pointer hover:bg-yellow-100" data-id="${booking.id}"><p class="font-semibold text-sm">${booking.title}</p><p class="text-xs text-gray-600">${booking.room}</p><p class="text-xs text-gray-600">${start.toLocaleDateString('pt-BR')} ${start.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}</p></div>`;
+            }).join('');
             elements.pendingRequestsList.querySelectorAll('div[data-id]').forEach(el => {
                 el.addEventListener('click', () => {
                     const booking = allBookings.find(b => b.id === el.dataset.id);
@@ -696,37 +547,29 @@
             });
         }
         
-        // --- EXPORTAR PARA CSV ---
         elements.exportCsvBtn.addEventListener('click', () => {
             const bookingsToExport = allBookings.filter(b => b.status === 'approved');
-            if (bookingsToExport.length === 0) {
-                return showToast("Nenhum agendamento aprovado para exportar.", "info");
-            }
+            if (bookingsToExport.length === 0) return showToast("Nenhum agendamento aprovado para exportar.", "info");
             const headers = ['ID', 'Titulo', 'Sala', 'Inicio', 'Fim', 'SolicitanteNome', 'SolicitanteEmail', 'Status'];
-            const rows = bookingsToExport.map(b => [b.id, b.title, b.room, b.start.toDate().toLocaleString('pt-BR'), b.end.toDate().toLocaleString('pt-BR'), b.requesterName, b.requesterEmail, b.status].map(val => `"${val}"`).join(','));
+            const rows = bookingsToExport.map(b => [b.id, b.title, b.room, b.start.toDate().toLocaleString('pt-BR'), b.end.toDate().toLocaleString('pt-BR'), b.requesterName, b.requesterEmail, b.status].map(val => `"${String(val).replace(/"/g, '""')}"`).join(','));
             const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows].join("\n");
             const link = document.createElement("a");
-            link.setAttribute("href", encodeURI(csvContent));
-            link.setAttribute("download", `agendamentos_cerradao_${new Date().toISOString().split('T')[0]}.csv`);
+            link.href = encodeURI(csvContent);
+            link.download = `agendamentos_cerradao_${new Date().toISOString().split('T')[0]}.csv`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
         });
 
-        // --- UTILITÁRIOS ---
         function showToast(message, type = "success") {
             elements.toastMessage.textContent = message;
-            elements.toast.className = 'fixed bottom-5 right-5 text-white py-3 px-6 rounded-lg shadow-lg opacity-0 transition-opacity duration-300'; // Reset
+            elements.toast.className = 'fixed bottom-5 right-5 text-white py-3 px-6 rounded-lg shadow-lg opacity-0 transition-opacity duration-300';
             const colors = { success: 'bg-gray-800', error: 'bg-red-600', info: 'bg-blue-500' };
-            elements.toast.classList.add(colors[type] || 'bg-gray-800');
-            elements.toast.classList.add('opacity-100');
+            elements.toast.classList.add(colors[type] || 'bg-gray-800', 'opacity-100');
             setTimeout(() => elements.toast.classList.remove('opacity-100'), 3000);
         }
 
-        // --- INICIALIZAÇÃO DA APLICAÇÃO ---
         initializeAppAndAuth();
-        renderCalendar();
-
     </script>
 </body>
 </html>
