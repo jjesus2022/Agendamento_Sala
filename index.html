@@ -66,113 +66,29 @@
             color: #333;
         }
 
-        /* =============================================== */
-        /* === ESTILOS PARA DISPOSITIVOS MÓVEIS      === */
-        /* =============================================== */
         @media (max-width: 768px) {
-            body {
-                -webkit-text-size-adjust: 100%; /* Previne zoom de texto no iOS */
-            }
-
-            /* Esconde a visão de desktop e mostra a de celular */
-            #calendarDesktopView {
-                display: none;
-            }
-            #mobileAgendaView {
-                display: block;
-            }
-
-            /* Ajusta o layout principal */
-            #app {
-                padding: 0.5rem;
-            }
-            main {
-                grid-template-columns: 1fr; /* Força uma única coluna */
-            }
-            #adminPanel {
-                order: 2; /* Manda o painel de admin para baixo do calendário */
-            }
-            #calendarColumn {
-                order: 1;
-            }
-
-            /* Ajusta o cabeçalho principal */
-            header {
-                flex-direction: column;
-                gap: 1rem;
-            }
-            header h1 {
-                font-size: 1.25rem; /* Título menor */
-                order: 1;
-            }
-            header .flex.items-center.gap-4:first-child { /* Logo */
-                order: 2;
-            }
-            header .flex.items-center.gap-4:last-child { /* Botões */
-                order: 3;
-                flex-direction: column;
-                width: 100%;
-            }
-            header .flex.items-center.gap-4:last-child button {
-                width: 100%;
-                margin-top: 0.5rem;
-            }
-
-            /* Estilos para a Visão de Agenda */
-            .agenda-day {
-                margin-bottom: 1.5rem;
-                padding-bottom: 1rem;
-                border-bottom: 1px solid #e2e8f0;
-            }
-            .agenda-day-header {
-                font-size: 1rem;
-                font-weight: 600;
-                margin-bottom: 0.75rem;
-                color: var(--brand-green);
-            }
-            .agenda-day-header .day-of-week {
-                font-weight: 400;
-                color: #4a5568;
-                font-size: 0.875rem;
-            }
-            .agenda-booking {
-                display: flex;
-                padding: 0.75rem;
-                border-radius: 6px;
-                margin-bottom: 0.5rem;
-                color: white;
-                cursor: pointer;
-            }
-            .agenda-booking .time {
-                font-weight: 600;
-                margin-right: 1rem;
-                flex-shrink: 0;
-            }
-            .agenda-booking .details {
-                display: flex;
-                flex-direction: column;
-            }
-            .agenda-booking .details .title {
-                font-weight: 500;
-            }
-            .agenda-booking .details .requester {
-                font-size: 0.75rem;
-                opacity: 0.8;
-            }
-
-            /* Melhora os modais */
-            .modal > div {
-                width: 100%;
-                max-width: 100%;
-                height: 100%;
-                max-height: 100%;
-                border-radius: 0;
-                padding: 1.5rem 1rem;
-                overflow-y: auto;
-            }
-            #bookingModal .grid {
-                grid-template-columns: 1fr; /* Força uma coluna nos formulários */
-            }
+            body { -webkit-text-size-adjust: 100%; }
+            #calendarDesktopView { display: none; }
+            #mobileAgendaView { display: block; }
+            #app { padding: 0.5rem; }
+            main { grid-template-columns: 1fr; }
+            #adminPanel { order: 2; }
+            #calendarColumn { order: 1; }
+            header { flex-direction: column; gap: 1rem; }
+            header h1 { font-size: 1.25rem; order: 1; }
+            header .flex.items-center.gap-4:first-child { order: 2; }
+            header .flex.items-center.gap-4:last-child { order: 3; flex-direction: column; width: 100%; }
+            header .flex.items-center.gap-4:last-child button { width: 100%; margin-top: 0.5rem; }
+            .agenda-day { margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid #e2e8f0; }
+            .agenda-day-header { font-size: 1rem; font-weight: 600; margin-bottom: 0.75rem; color: var(--brand-green); }
+            .agenda-day-header .day-of-week { font-weight: 400; color: #4a5568; font-size: 0.875rem; }
+            .agenda-booking { display: flex; padding: 0.75rem; border-radius: 6px; margin-bottom: 0.5rem; color: white; cursor: pointer; }
+            .agenda-booking .time { font-weight: 600; margin-right: 1rem; flex-shrink: 0; }
+            .agenda-booking .details { display: flex; flex-direction: column; }
+            .agenda-booking .details .title { font-weight: 500; }
+            .agenda-booking .details .requester { font-size: 0.75rem; opacity: 0.8; }
+            .modal > div { width: 100%; max-width: 100%; height: 100%; max-height: 100%; border-radius: 0; padding: 1.5rem 1rem; overflow-y: auto; }
+            #bookingModal .grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -212,7 +128,6 @@
                         <h2 id="currentMonthYear" class="text-xl font-bold text-center"></h2>
                         <button id="nextMonthBtn" class="p-2 rounded-full hover:bg-gray-100">&gt;</button>
                     </div>
-                    
                     <div id="calendarDesktopView">
                         <div class="calendar-grid border-t border-l border-gray-200">
                             <div class="text-center font-bold p-2 border-r border-b bg-gray-50">Dom</div>
@@ -225,9 +140,7 @@
                         </div>
                         <div id="calendarBody" class="calendar-grid"></div>
                     </div>
-
-                    <div id="mobileAgendaView" class="hidden">
-                        </div>
+                    <div id="mobileAgendaView" class="hidden"></div>
                 </div>
             </div>
         </main>
@@ -237,18 +150,9 @@
         <div class="bg-white rounded-lg shadow-2xl w-full max-w-sm p-8 transform scale-95 transition-transform">
             <h2 class="text-2xl font-bold mb-6 text-center">Login do Administrador</h2>
             <form id="loginForm">
-                <div class="mb-4">
-                    <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
-                    <input type="email" id="email" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-green focus:border-brand-green" required>
-                </div>
-                <div class="mb-6">
-                    <label for="password" class="block text-sm font-medium text-gray-700">Senha</label>
-                    <input type="password" id="password" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-green focus:border-brand-green" required>
-                </div>
-                <div class="flex flex-col gap-2">
-                    <button type="submit" class="w-full bg-brand-green hover:bg-opacity-90 text-white font-bold py-2 px-4 rounded-lg">Entrar</button>
-                    <button type="button" id="cancelLoginBtn" class="w-full text-gray-600 hover:text-gray-900 font-medium py-2 px-4">Cancelar</button>
-                </div>
+                <div class="mb-4"><label for="email" class="block text-sm font-medium text-gray-700">Email</label><input type="email" id="email" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required></div>
+                <div class="mb-6"><label for="password" class="block text-sm font-medium text-gray-700">Senha</label><input type="password" id="password" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required></div>
+                <div class="flex flex-col gap-2"><button type="submit" class="w-full bg-brand-green hover:bg-opacity-90 text-white font-bold py-2 px-4 rounded-lg">Entrar</button><button type="button" id="cancelLoginBtn" class="w-full text-gray-600 hover:text-gray-900 font-medium py-2 px-4">Cancelar</button></div>
             </form>
         </div>
     </div>
@@ -258,37 +162,36 @@
             <form id="bookingForm">
                 <input type="hidden" id="bookingId">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div>
-                        <label for="requesterNameInput" class="block text-sm font-medium text-gray-700">Nome do Solicitante</label>
-                        <input type="text" id="requesterNameInput" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-green focus:border-brand-green" required>
-                    </div>
-                    <div>
-                        <label for="requesterEmailInput" class="block text-sm font-medium text-gray-700">E-mail do Solicitante</label>
-                        <input type="email" id="requesterEmailInput" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-green focus:border-brand-green" required>
-                    </div>
+                    <div><label for="requesterNameInput" class="block text-sm font-medium text-gray-700">Nome do Solicitante</label><input type="text" id="requesterNameInput" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required></div>
+                    <div><label for="requesterEmailInput" class="block text-sm font-medium text-gray-700">E-mail do Solicitante</label><input type="email" id="requesterEmailInput" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required></div>
                 </div>
-                <div class="mb-4">
-                    <label for="title" class="block text-sm font-medium text-gray-700">Título da Reunião</label>
-                    <input type="text" id="title" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-green focus:border-brand-green" required>
-                </div>
-                <div class="mb-4">
-                    <label for="room" class="block text-sm font-medium text-gray-700">Sala</label>
-                    <select id="room" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-green focus:border-brand-green" required>
-                        <option value="Sala 01">Sala 01 (Grande - Treinamentos)</option>
-                        <option value="Sala 02">Sala 02 (Média - Antigo PCM)</option>
-                        <option value="Sala 03">Sala 03 (Pequena - Frente antigo PCM)</option>
-                    </select>
-                </div>
+                <div class="mb-4"><label for="title" class="block text-sm font-medium text-gray-700">Título da Reunião</label><input type="text" id="title" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required></div>
+                <div class="mb-4"><label for="room" class="block text-sm font-medium text-gray-700">Sala</label><select id="room" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required><option value="Sala 01">Sala 01 (Grande - Treinamentos)</option><option value="Sala 02">Sala 02 (Média - Antigo PCM)</option><option value="Sala 03">Sala 03 (Pequena - Frente antigo PCM)</option></select></div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div>
-                        <label for="startDate" class="block text-sm font-medium text-gray-700">Data e Hora de Início</label>
-                        <input type="datetime-local" id="startDate" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-green focus:border-brand-green" required>
-                    </div>
-                    <div>
-                        <label for="endDate" class="block text-sm font-medium text-gray-700">Data e Hora de Fim</label>
-                        <input type="datetime-local" id="endDate" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-green focus:border-brand-green" required>
+                    <div><label for="startDate" class="block text-sm font-medium text-gray-700">Data e Hora de Início</label><input type="datetime-local" id="startDate" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required></div>
+                    <div><label for="endDate" class="block text-sm font-medium text-gray-700">Data e Hora de Fim</label><input type="datetime-local" id="endDate" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required></div>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="flex items-center"><input type="checkbox" id="isRecurring" class="rounded border-gray-300 text-brand-green shadow-sm focus:border-brand-green focus:ring focus:ring-offset-0 focus:ring-green-200 focus:ring-opacity-50"><span class="ml-2 text-sm text-gray-600">Repetir agendamento</span></label>
+                </div>
+                <div id="recurrenceOptions" class="hidden p-4 bg-gray-50 rounded-lg border border-gray-200 mb-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="recurrenceFrequency" class="block text-sm font-medium text-gray-700">Frequência</label>
+                            <select id="recurrenceFrequency" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                <option value="daily">Diariamente</option>
+                                <option value="weekly">Semanalmente</option>
+                                <option value="monthly">Mensalmente</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="recurrenceEndDate" class="block text-sm font-medium text-gray-700">Repetir até</label>
+                            <input type="date" id="recurrenceEndDate" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                        </div>
                     </div>
                 </div>
+
                  <div id="requesterInfo" class="mb-4 p-3 bg-gray-100 rounded-md hidden">
                     <p class="text-sm"><span class="font-semibold">Solicitante:</span> <span id="requesterNameDisplay"></span></p>
                     <p class="text-sm"><span class="font-semibold">E-mail:</span> <span id="requesterEmailDisplay"></span></p>
@@ -314,7 +217,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, addDoc, updateDoc, deleteDoc, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, addDoc, updateDoc, deleteDoc, serverTimestamp, Timestamp, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAuth, setPersistence, browserLocalPersistence, signInAnonymously, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
         const firebaseConfig = {
@@ -379,6 +282,9 @@
             password: document.getElementById('password'),
             cancelLoginBtn: document.getElementById('cancelLoginBtn'),
             notificationSound: document.getElementById('notificationSound'),
+            isRecurring: document.getElementById('isRecurring'),
+            recurrenceOptions: document.getElementById('recurrenceOptions'),
+            recurrenceEndDate: document.getElementById('recurrenceEndDate'),
         };
 
         function playNotificationSound() {
@@ -411,20 +317,16 @@
                 await setPersistence(auth, browserLocalPersistence);
                 onAuthStateChanged(auth, async (user) => {
                     if (unsubscribeFromBookings) unsubscribeFromBookings();
-
                     currentUser = user;
                     const wasAdmin = isAdmin;
                     isAdmin = user ? !user.isAnonymous && user.email?.toLowerCase().trim() === ADMIN_EMAIL.toLowerCase().trim() : false;
-
                     if (isAdmin && !wasAdmin && Notification.permission === 'default') {
                         Notification.requestPermission();
                     }
-
                     if (user) {
                         const bookingsCol = collection(db, 'artifacts', firebaseConfig.projectId, 'public', 'data', 'bookings');
                         unsubscribeFromBookings = onSnapshot(bookingsCol, (snapshot) => {
                             allBookings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
                             if (!isInitialLoad && isAdmin) {
                                 snapshot.docChanges().forEach((change) => {
                                     if (change.type === "added" && change.doc.data().status === 'pending') {
@@ -433,7 +335,6 @@
                                     }
                                 });
                             }
-                            
                             renderCalendar();
                             if (isAdmin) renderPendingRequests();
                             isInitialLoad = false;
@@ -441,10 +342,8 @@
                     } else {
                         await signInAnonymously(auth);
                     }
-                    
                     updateUserInfo();
                     setupUIForRole();
-
                     elements.loader.style.display = 'none';
                     elements.appDiv.style.display = 'block';
                 });
@@ -482,7 +381,6 @@
         }
         
         function renderCalendar() {
-            // --- Lógica para a visão de Desktop ---
             const calendarBody = document.getElementById('calendarBody');
             calendarBody.innerHTML = '';
             currentDate.setDate(1);
@@ -514,8 +412,6 @@
                 dayEl.appendChild(dayBookingsContainer);
                 calendarBody.appendChild(dayEl);
             }
-
-            // --- Lógica para a visão de Agenda Móvel ---
             const mobileAgendaView = document.getElementById('mobileAgendaView');
             mobileAgendaView.innerHTML = '';
             const bookingsThisMonth = allBookings.filter(b => b.status !== 'rejected' && b.start && b.start.toDate().getMonth() === month && b.start.toDate().getFullYear() === year).sort((a, b) => a.start.toDate() - b.start.toDate());
@@ -595,9 +491,10 @@
             elements.requesterInfo.classList.add('hidden');
             elements.adminActions.classList.add('hidden');
             elements.saveBtn.classList.remove('hidden');
+            elements.recurrenceOptions.classList.add('hidden');
+            elements.isRecurring.disabled = false;
             const getStatusColor = (status) => ({ approved: 'green', pending: 'yellow', rejected: 'red' }[status] || 'gray');
             const formatDateTime = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-            
             if (booking) {
                 elements.modalTitle.textContent = 'Detalhes do Agendamento';
                 elements.bookingId.value = booking.id;
@@ -616,6 +513,7 @@
                 const fields = [elements.title, elements.requesterNameInput, elements.requesterEmailInput, elements.room, elements.startDate, elements.endDate];
                 fields.forEach(field => field.disabled = !canEdit);
                 elements.saveBtn.classList.toggle('hidden', !canEdit);
+                elements.isRecurring.disabled = true; // Não permite alterar recorrência de um evento existente
                 if (isAdmin) {
                     elements.adminActions.classList.remove('hidden');
                     elements.approveBtn.classList.toggle('hidden', booking.status !== 'pending');
@@ -635,31 +533,97 @@
 
         elements.newBookingBtn.addEventListener('click', () => openBookingModal());
         elements.cancelBtn.addEventListener('click', () => closeModal(elements.bookingModal));
+        elements.isRecurring.addEventListener('change', (e) => {
+            elements.recurrenceOptions.classList.toggle('hidden', !e.target.checked);
+        });
 
         elements.bookingForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             if (!currentUser) return showToast("Aguardando autenticação.", "error");
+            
             const id = elements.bookingId.value;
             const start = new Date(elements.startDate.value);
             const end = new Date(elements.endDate.value);
+
             if (end <= start) return showToast("A data de fim deve ser posterior à de início.", "error");
             if (start.toDateString() !== end.toDateString()) return showToast("O agendamento deve começar e terminar no mesmo dia.", "error");
-            const hasConflict = allBookings.some(b => b.status === 'approved' && b.room === elements.room.value && b.id !== id && Math.max(start, b.start.toDate()) < Math.min(end, b.end.toDate()));
-            if (hasConflict) return showToast("Conflito de horário! Já existe uma reserva aprovada.", "error");
+            
+            const bookingData = { title: elements.title.value, requesterName: elements.requesterNameInput.value, requesterEmail: elements.requesterEmailInput.value, room: elements.room.value, requesterId: currentUser.uid, status: 'pending', createdAt: serverTimestamp() };
+            
+            if (elements.isRecurring.checked) {
+                // --- LÓGICA DE RECORRÊNCIA ---
+                const frequency = document.getElementById('recurrenceFrequency').value;
+                const recurrenceEndDateValue = elements.recurrenceEndDate.value;
+                if (!recurrenceEndDateValue) return showToast("Por favor, selecione a data final da repetição.", "error");
 
-            const bookingData = { title: elements.title.value, requesterName: elements.requesterNameInput.value, requesterEmail: elements.requesterEmailInput.value, room: elements.room.value, start: Timestamp.fromDate(start), end: Timestamp.fromDate(end) };
-            try {
-                const bookingsCol = collection(db, 'artifacts', firebaseConfig.projectId, 'public', 'data', 'bookings');
-                if (id) {
-                    await updateDoc(doc(bookingsCol, id), bookingData);
-                    showToast("Agendamento atualizado!");
-                } else {
-                    await addDoc(bookingsCol, { ...bookingData, requesterId: currentUser.uid, status: 'pending', createdAt: serverTimestamp() });
-                    showToast("Solicitação de agendamento enviada!");
+                const recurrenceEndDate = new Date(recurrenceEndDateValue);
+                if (recurrenceEndDate < start) return showToast("A data final da repetição deve ser após a data de início.", "error");
+                
+                const occurrences = [];
+                let currentDate = new Date(start.getTime());
+                const eventDuration = end.getTime() - start.getTime();
+
+                while (currentDate <= recurrenceEndDate) {
+                    const newStart = new Date(currentDate.getTime());
+                    const newEnd = new Date(newStart.getTime() + eventDuration);
+                    occurrences.push({ start: newStart, end: newEnd });
+
+                    if (frequency === 'daily') {
+                        currentDate.setDate(currentDate.getDate() + 1);
+                    } else if (frequency === 'weekly') {
+                        currentDate.setDate(currentDate.getDate() + 7);
+                    } else if (frequency === 'monthly') {
+                        currentDate.setMonth(currentDate.getMonth() + 1);
+                    }
                 }
-                closeModal(elements.bookingModal);
-            } catch (error) {
-                showToast("Ocorreu um erro ao salvar.", "error");
+                
+                // Verificar conflitos para TODAS as ocorrências ANTES de salvar
+                for (const occ of occurrences) {
+                    const hasConflict = allBookings.some(b => b.status === 'approved' && b.room === bookingData.room && Math.max(occ.start, b.start.toDate()) < Math.min(occ.end, b.end.toDate()));
+                    if (hasConflict) {
+                        return showToast(`Conflito de horário encontrado para o dia ${occ.start.toLocaleDateString()}. Nenhum agendamento foi criado.`, "error");
+                    }
+                }
+
+                // Se não houver conflitos, salvar em lote
+                try {
+                    const batch = writeBatch(db);
+                    const bookingsCol = collection(db, 'artifacts', firebaseConfig.projectId, 'public', 'data', 'bookings');
+                    const recurrenceId = doc(collection(db, 'dummy')).id; // Gera um ID único para a série
+                    
+                    occurrences.forEach(occ => {
+                        const docRef = doc(bookingsCol);
+                        batch.set(docRef, { ...bookingData, start: Timestamp.fromDate(occ.start), end: Timestamp.fromDate(occ.end), recurrenceId });
+                    });
+                    
+                    await batch.commit();
+                    showToast(`${occurrences.length} agendamentos recorrentes enviados para aprovação!`);
+                    closeModal(elements.bookingModal);
+                } catch (error) {
+                    console.error("Erro ao salvar agendamentos recorrentes:", error);
+                    showToast("Ocorreu um erro ao salvar a série de agendamentos.", "error");
+                }
+
+            } else {
+                // --- LÓGICA DE AGENDAMENTO ÚNICO ---
+                const hasConflict = allBookings.some(b => b.status === 'approved' && b.room === bookingData.room && b.id !== id && Math.max(start, b.start.toDate()) < Math.min(end, b.end.toDate()));
+                if (hasConflict) return showToast("Conflito de horário! Já existe uma reserva aprovada.", "error");
+                
+                try {
+                    const bookingsCol = collection(db, 'artifacts', firebaseConfig.projectId, 'public', 'data', 'bookings');
+                    if (id) {
+                        // A edição não foi implementada para recorrência, então só atualiza os dados básicos
+                        const updateData = { title: bookingData.title, requesterName: bookingData.requesterName, requesterEmail: bookingData.requesterEmail, room: bookingData.room, start: Timestamp.fromDate(start), end: Timestamp.fromDate(end) };
+                        await updateDoc(doc(bookingsCol, id), updateData);
+                        showToast("Agendamento atualizado!");
+                    } else {
+                        await addDoc(bookingsCol, { ...bookingData, start: Timestamp.fromDate(start), end: Timestamp.fromDate(end) });
+                        showToast("Solicitação de agendamento enviada!");
+                    }
+                    closeModal(elements.bookingModal);
+                } catch (error) {
+                    showToast("Ocorreu um erro ao salvar.", "error");
+                }
             }
         });
 
@@ -718,7 +682,7 @@
             elements.toast.className = 'fixed bottom-5 right-5 text-white py-3 px-6 rounded-lg shadow-lg opacity-0 transition-opacity duration-300';
             const colors = { success: 'bg-gray-800', error: 'bg-red-600', info: 'bg-blue-500' };
             elements.toast.classList.add(colors[type] || 'bg-gray-800', 'opacity-100');
-            setTimeout(() => elements.toast.classList.remove('opacity-100'), 3000);
+            setTimeout(() => elements.toast.classList.remove('opacity-100'), 5000); // Aumentei o tempo do toast para erros
         }
 
         initializeAppAndAuth();
