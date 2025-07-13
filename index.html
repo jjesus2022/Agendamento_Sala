@@ -67,7 +67,7 @@
         }
 
         /* =============================================== */
-        /* === ESTILOS PARA DISPOSITIVOS MÓVEIS (NOVO) === */
+        /* === ESTILOS PARA DISPOSITIVOS MÓVEIS      === */
         /* =============================================== */
         @media (max-width: 768px) {
             body {
@@ -387,6 +387,11 @@
         }
 
         function showDesktopNotification(title, body) {
+            if (document.hasFocus()) {
+                showToast(body, 'info');
+                playNotificationSound();
+                return;
+            }
             if (!('Notification' in window)) return;
             if (Notification.permission === "granted") {
                 new Notification(title, { body, icon: './logo-cerradao.png' });
@@ -412,7 +417,7 @@
                     isAdmin = user ? !user.isAnonymous && user.email?.toLowerCase().trim() === ADMIN_EMAIL.toLowerCase().trim() : false;
 
                     if (isAdmin && !wasAdmin && Notification.permission === 'default') {
-                        showDesktopNotification('Notificações Ativadas', 'Você será notificado sobre novas solicitações.');
+                        Notification.requestPermission();
                     }
 
                     if (user) {
@@ -478,7 +483,8 @@
         
         function renderCalendar() {
             // --- Lógica para a visão de Desktop ---
-            elements.calendarBody.innerHTML = '';
+            const calendarBody = document.getElementById('calendarBody');
+            calendarBody.innerHTML = '';
             currentDate.setDate(1);
             const month = currentDate.getMonth();
             const year = currentDate.getFullYear();
@@ -486,7 +492,7 @@
             const firstDayOfMonth = new Date(year, month, 1).getDay();
             const daysInMonth = new Date(year, month + 1, 0).getDate();
             for (let i = 0; i < firstDayOfMonth; i++) {
-                elements.calendarBody.innerHTML += `<div class="calendar-day p-2 border-r border-b bg-gray-50"></div>`;
+                calendarBody.innerHTML += `<div class="calendar-day p-2 border-r border-b bg-gray-50"></div>`;
             }
             for (let day = 1; day <= daysInMonth; day++) {
                 const dayEl = document.createElement('div');
@@ -506,7 +512,7 @@
                     dayBookingsContainer.appendChild(bookingEl);
                 });
                 dayEl.appendChild(dayBookingsContainer);
-                elements.calendarBody.appendChild(dayEl);
+                calendarBody.appendChild(dayEl);
             }
 
             // --- Lógica para a visão de Agenda Móvel ---
@@ -719,4 +725,3 @@
     </script>
 </body>
 </html>
-
