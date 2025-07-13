@@ -39,7 +39,6 @@
             text-overflow: ellipsis;
             white-space: nowrap;
             cursor: pointer;
-            /* REGRA ADICIONADA: Limita a largura para forçar a quebra de texto */
             max-width: 90px;
         }
 
@@ -65,6 +64,115 @@
             height: 100vh;
             font-size: 1.2rem;
             color: #333;
+        }
+
+        /* =============================================== */
+        /* === ESTILOS PARA DISPOSITIVOS MÓVEIS (NOVO) === */
+        /* =============================================== */
+        @media (max-width: 768px) {
+            body {
+                -webkit-text-size-adjust: 100%; /* Previne zoom de texto no iOS */
+            }
+
+            /* Esconde a visão de desktop e mostra a de celular */
+            #calendarDesktopView {
+                display: none;
+            }
+            #mobileAgendaView {
+                display: block;
+            }
+
+            /* Ajusta o layout principal */
+            #app {
+                padding: 0.5rem;
+            }
+            main {
+                grid-template-columns: 1fr; /* Força uma única coluna */
+            }
+            #adminPanel {
+                order: 2; /* Manda o painel de admin para baixo do calendário */
+            }
+            #calendarColumn {
+                order: 1;
+            }
+
+            /* Ajusta o cabeçalho principal */
+            header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            header h1 {
+                font-size: 1.25rem; /* Título menor */
+                order: 1;
+            }
+            header .flex.items-center.gap-4:first-child { /* Logo */
+                order: 2;
+            }
+            header .flex.items-center.gap-4:last-child { /* Botões */
+                order: 3;
+                flex-direction: column;
+                width: 100%;
+            }
+            header .flex.items-center.gap-4:last-child button {
+                width: 100%;
+                margin-top: 0.5rem;
+            }
+
+            /* Estilos para a Visão de Agenda */
+            .agenda-day {
+                margin-bottom: 1.5rem;
+                padding-bottom: 1rem;
+                border-bottom: 1px solid #e2e8f0;
+            }
+            .agenda-day-header {
+                font-size: 1rem;
+                font-weight: 600;
+                margin-bottom: 0.75rem;
+                color: var(--brand-green);
+            }
+            .agenda-day-header .day-of-week {
+                font-weight: 400;
+                color: #4a5568;
+                font-size: 0.875rem;
+            }
+            .agenda-booking {
+                display: flex;
+                padding: 0.75rem;
+                border-radius: 6px;
+                margin-bottom: 0.5rem;
+                color: white;
+                cursor: pointer;
+            }
+            .agenda-booking .time {
+                font-weight: 600;
+                margin-right: 1rem;
+                flex-shrink: 0;
+            }
+            .agenda-booking .details {
+                display: flex;
+                flex-direction: column;
+            }
+            .agenda-booking .details .title {
+                font-weight: 500;
+            }
+            .agenda-booking .details .requester {
+                font-size: 0.75rem;
+                opacity: 0.8;
+            }
+
+            /* Melhora os modais */
+            .modal > div {
+                width: 100%;
+                max-width: 100%;
+                height: 100%;
+                max-height: 100%;
+                border-radius: 0;
+                padding: 1.5rem 1rem;
+                overflow-y: auto;
+            }
+            #bookingModal .grid {
+                grid-template-columns: 1fr; /* Força uma coluna nos formulários */
+            }
         }
     </style>
 </head>
@@ -104,16 +212,22 @@
                         <h2 id="currentMonthYear" class="text-xl font-bold text-center"></h2>
                         <button id="nextMonthBtn" class="p-2 rounded-full hover:bg-gray-100">&gt;</button>
                     </div>
-                    <div class="calendar-grid border-t border-l border-gray-200">
-                        <div class="text-center font-bold p-2 border-r border-b bg-gray-50">Dom</div>
-                        <div class="text-center font-bold p-2 border-r border-b bg-gray-50">Seg</div>
-                        <div class="text-center font-bold p-2 border-r border-b bg-gray-50">Ter</div>
-                        <div class="text-center font-bold p-2 border-r border-b bg-gray-50">Qua</div>
-                        <div class="text-center font-bold p-2 border-r border-b bg-gray-50">Qui</div>
-                        <div class="text-center font-bold p-2 border-r border-b bg-gray-50">Sex</div>
-                        <div class="text-center font-bold p-2 border-r border-b bg-gray-50">Sáb</div>
+                    
+                    <div id="calendarDesktopView">
+                        <div class="calendar-grid border-t border-l border-gray-200">
+                            <div class="text-center font-bold p-2 border-r border-b bg-gray-50">Dom</div>
+                            <div class="text-center font-bold p-2 border-r border-b bg-gray-50">Seg</div>
+                            <div class="text-center font-bold p-2 border-r border-b bg-gray-50">Ter</div>
+                            <div class="text-center font-bold p-2 border-r border-b bg-gray-50">Qua</div>
+                            <div class="text-center font-bold p-2 border-r border-b bg-gray-50">Qui</div>
+                            <div class="text-center font-bold p-2 border-r border-b bg-gray-50">Sex</div>
+                            <div class="text-center font-bold p-2 border-r border-b bg-gray-50">Sáb</div>
+                        </div>
+                        <div id="calendarBody" class="calendar-grid"></div>
                     </div>
-                     <div id="calendarBody" class="calendar-grid"></div>
+
+                    <div id="mobileAgendaView" class="hidden">
+                        </div>
                 </div>
             </div>
         </main>
@@ -229,9 +343,9 @@
             userInfo: document.getElementById('userInfo'),
             adminPanel: document.getElementById('adminPanel'),
             calendarColumn: document.getElementById('calendarColumn'),
+            calendarBody: document.getElementById('calendarBody'),
             pendingRequestsList: document.getElementById('pendingRequestsList'),
             currentMonthYear: document.getElementById('currentMonthYear'),
-            calendarBody: document.getElementById('calendarBody'),
             bookingModal: document.getElementById('bookingModal'),
             bookingForm: document.getElementById('bookingForm'),
             modalTitle: document.getElementById('modalTitle'),
@@ -273,10 +387,7 @@
         }
 
         function showDesktopNotification(title, body) {
-            if (!('Notification' in window)) {
-                console.log("Este navegador não suporta notificações de desktop.");
-                return;
-            }
+            if (!('Notification' in window)) return;
             if (Notification.permission === "granted") {
                 new Notification(title, { body, icon: './logo-cerradao.png' });
                 playNotificationSound();
@@ -366,6 +477,7 @@
         }
         
         function renderCalendar() {
+            // --- Lógica para a visão de Desktop ---
             elements.calendarBody.innerHTML = '';
             currentDate.setDate(1);
             const month = currentDate.getMonth();
@@ -381,7 +493,7 @@
                 dayEl.className = 'calendar-day relative p-2 border-r border-b';
                 const date = new Date(year, month, day);
                 const today = new Date();
-                if (date.getDate() === today.getDate() && date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear()) {
+                if (date.toDateString() === today.toDateString()) {
                     dayEl.innerHTML = `<div class="absolute top-1 right-1 bg-brand-green text-white rounded-full h-6 w-6 flex items-center justify-center text-sm font-bold">${day}</div>`;
                 } else {
                     dayEl.innerHTML = `<div class="text-sm">${day}</div>`;
@@ -395,6 +507,40 @@
                 });
                 dayEl.appendChild(dayBookingsContainer);
                 elements.calendarBody.appendChild(dayEl);
+            }
+
+            // --- Lógica para a visão de Agenda Móvel ---
+            const mobileAgendaView = document.getElementById('mobileAgendaView');
+            mobileAgendaView.innerHTML = '';
+            const bookingsThisMonth = allBookings.filter(b => b.status !== 'rejected' && b.start && b.start.toDate().getMonth() === month && b.start.toDate().getFullYear() === year).sort((a, b) => a.start.toDate() - b.start.toDate());
+            if (bookingsThisMonth.length === 0) {
+                mobileAgendaView.innerHTML = '<p class="text-center text-gray-500 mt-8">Nenhum agendamento para este mês.</p>';
+            } else {
+                const bookingsByDay = bookingsThisMonth.reduce((acc, booking) => {
+                    const dayKey = booking.start.toDate().toDateString();
+                    if (!acc[dayKey]) acc[dayKey] = [];
+                    acc[dayKey].push(booking);
+                    return acc;
+                }, {});
+                for (const dayKey in bookingsByDay) {
+                    const dayBookings = bookingsByDay[dayKey];
+                    const date = new Date(dayKey);
+                    const dayEl = document.createElement('div');
+                    dayEl.className = 'agenda-day';
+                    dayEl.innerHTML = `<div class="agenda-day-header">${date.getDate()} de ${date.toLocaleString('pt-BR', { month: 'long' })}<span class="day-of-week">${date.toLocaleString('pt-BR', { weekday: 'long' })}</span></div>`;
+                    dayBookings.forEach(booking => {
+                        const startTime = booking.start.toDate().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                        const roomClass = `booking-${booking.room.toLowerCase().replace(/\s+/g, '-')}`;
+                        dayEl.innerHTML += `<div class="agenda-booking ${roomClass}" data-id="${booking.id}"><div class="time">${startTime}</div><div class="details"><span class="title">${booking.title}</span><span class="requester">${booking.requesterName}</span></div></div>`;
+                    });
+                    mobileAgendaView.appendChild(dayEl);
+                }
+                mobileAgendaView.querySelectorAll('.agenda-booking').forEach(el => {
+                    el.addEventListener('click', () => {
+                        const booking = allBookings.find(b => b.id === el.dataset.id);
+                        if (booking) openBookingModal(booking);
+                    });
+                });
             }
         }
 
