@@ -1,593 +1,645 @@
-import React, { useState, useEffect, createContext, useContext } from 'react';
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agendamento de Salas de Reunião - Cerradão</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7fafc;
+        }
+        /* Cores personalizadas baseadas no logo */
+        :root {
+            --brand-green: #006837;
+            --brand-orange: #D47A2A;
+            --brand-light-green: #6DC066;
+            --status-pending: #f59e0b; /* Ambar */
+            --status-approved: #10b981; /* Esmeralda */
+            --status-rejected: #ef4444; /* Vermelho */
+        }
+        .bg-brand-green { background-color: var(--brand-green); }
+        .text-brand-green { color: var(--brand-green); }
+        .border-brand-green { border-color: var(--brand-green); }
+        .bg-brand-orange { background-color: var(--brand-orange); }
+        .text-brand-orange { color: var(--brand-orange); }
+        .bg-brand-light-green { background-color: var(--brand-light-green); }
+        
+        /* Estilos para o calendário */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+        }
+        .calendar-day {
+            min-height: 120px;
+            transition: background-color 0.2s;
+        }
+        .calendar-day:hover {
+            background-color: #f0fdf4;
+        }
+        .booking {
+            font-size: 0.75rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-bottom: 4px;
+            color: white;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+        /* Cores das salas */
+        .booking-sala-01 { background-color: var(--brand-green); }
+        .booking-sala-02 { background-color: var(--brand-orange); }
+        .booking-sala-03 { background-color: var(--brand-light-green); }
 
-// Contexto para compartilhar o estado dos dados e do usuário
-const DataContext = createContext(null);
+        /* Estilo para status */
+        .booking-pending { opacity: 0.7; border-left: 3px solid var(--status-pending); }
+        .booking-approved { border-left: 3px solid var(--status-approved); }
+        .booking-rejected { opacity: 0.5; text-decoration: line-through; border-left: 3px solid var(--status-rejected); }
 
-const App = () => {
-  const [userId, setUserId] = useState(localStorage.getItem('currentUserId') || 'guest_user');
-  const [isAdmin, setIsAdmin] = useState(localStorage.getItem('isAdmin') === 'true');
-  const [view, setView] = useState('dashboard'); // 'dashboard', 'admin'
-  const [loading, setLoading] = useState(true);
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [loginError, setLoginError] = useState('');
-  const [meetings, setMeetings] = useState([]);
+        /* Scrollbar customizada */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #aaa; }
 
-  // Salas de reunião
-  const rooms = [
-    { id: 'sala01', name: 'Sala 01 (Grande - Treinamentos)' },
-    { id: 'sala02', name: 'Sala 02 (Média - Antigo PCM)' },
-    { id: 'sala03', name: 'Sala 03 (Pequena - Frente antigo PCM)' },
-  ];
+        /* Modal */
+        .modal {
+            transition: opacity 0.3s ease;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
 
-  // Cores do logo Cerradão
-  const colors = {
-    primaryGreen: '#1E6C1D',
-    secondaryOrange: '#C47225',
-    lightGreen: '#4CAF50',
-    textDark: '#333333',
-    bgLight: '#F8F8F8',
-    bgWhite: '#FFFFFF',
-    borderGray: '#EEEEEE',
-    statusApproved: '#1E6C1D', // Dark Green
-    statusPending: '#FFC107',  // Yellow/Amber
-    statusRejected: '#DC3545',  // Red
-  };
-
-  // Carrega agendamentos do localStorage ao iniciar
-  useEffect(() => {
-    const storedMeetings = JSON.parse(localStorage.getItem('meetings')) || [];
-    setMeetings(storedMeetings);
-    setLoading(false);
-  }, []);
-
-  // Salva agendamentos no localStorage sempre que 'meetings' mudar
-  useEffect(() => {
-    if (!loading) { // Evita salvar no primeiro carregamento antes dos dados serem populados
-      localStorage.setItem('meetings', JSON.stringify(meetings));
-    }
-  }, [meetings, loading]);
-
-  // Funções para manipular os agendamentos
-  const addMeeting = (newMeeting) => {
-    setMeetings(prevMeetings => {
-      const updatedMeetings = [...prevMeetings, { id: Date.now().toString(), ...newMeeting }];
-      return updatedMeetings.sort((a, b) => {
-        const dateA = new Date(`${a.meetingDate}T${a.startTime}`);
-        const dateB = new Date(`${b.meetingDate}T${b.startTime}`);
-        return dateA - dateB;
-      });
-    });
-  };
-
-  const updateMeeting = (id, updates) => {
-    setMeetings(prevMeetings => {
-      const updatedMeetings = prevMeetings.map(meeting =>
-        meeting.id === id ? { ...meeting, ...updates } : meeting
-      );
-      return updatedMeetings.sort((a, b) => {
-        const dateA = new Date(`${a.meetingDate}T${a.startTime}`);
-        const dateB = new Date(`${b.meetingDate}T${b.startTime}`);
-        return dateA - dateB;
-      });
-    });
-  };
-
-  const deleteMeeting = (id) => {
-    setMeetings(prevMeetings => prevMeetings.filter(meeting => meeting.id !== id));
-  };
-
-  // Simples login de administrador para demonstração
-  const handleAdminLogin = (password) => {
-    if (password === 'admin123') { // Senha de demonstração
-      setUserId('admin_demo_uid');
-      setIsAdmin(true);
-      localStorage.setItem('currentUserId', 'admin_demo_uid');
-      localStorage.setItem('isAdmin', 'true');
-      setView('admin');
-      setShowLoginModal(false);
-      setLoginError('');
-    } else {
-      setLoginError('Senha incorreta.');
-    }
-  };
-
-  const handleLogout = () => {
-    setIsAdmin(false);
-    setUserId('guest_user'); // Volta para usuário convidado
-    localStorage.removeItem('currentUserId');
-    localStorage.removeItem('isAdmin');
-    setView('dashboard');
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <div className="text-2xl font-semibold text-gray-700">Carregando...</div>
-      </div>
-    );
-  }
-
-  return (
-    <DataContext.Provider value={{ userId, isAdmin, rooms, colors, meetings, addMeeting, updateMeeting, deleteMeeting }}>
-      <div className="min-h-screen flex flex-col" style={{ backgroundColor: colors.bgLight }}>
-        {/* Cabeçalho */}
-        <header className="bg-white shadow-md py-4" style={{ borderBottom: `1px solid ${colors.borderGray}` }}>
-          <div className="container mx-auto px-4 flex justify-between items-center">
-            <div className="flex items-center">
-              <img src="logo-cerradao.png" alt="Cerradão Logo" className="h-12 mr-4 rounded-md" />
-              <h1 className="text-3xl font-bold" style={{ color: colors.primaryGreen }}>
-                Cerradão Room Booker
-              </h1>
+    <!-- Container Principal -->
+    <div id="app" class="min-h-screen p-4 md:p-8">
+        
+        <!-- Cabeçalho -->
+        <header class="flex flex-col md:flex-row justify-between items-center mb-6 pb-4 border-b border-gray-200">
+            <div class="flex items-center gap-4 mb-4 md:mb-0">
+                <img src="https://storage.googleapis.com/maker-me/uploads/uploaded%3Alogo-cerradao.png-6962c2a5-a4ba-4d00-a870-2885a1040c0a" alt="Logo Cerradão" class="h-12">
+                <h1 class="text-2xl md:text-3xl font-bold text-brand-green">Agendamento de Salas</h1>
             </div>
-            <nav>
-              <ul className="flex space-x-6">
-                <li>
-                  <button
-                    onClick={() => setView('dashboard')}
-                    className={`font-semibold text-lg hover:text-green-700 transition duration-300 ${view === 'dashboard' ? 'text-green-700' : 'text-gray-700'}`}
-                  >
-                    Dashboard
-                  </button>
-                </li>
-                {isAdmin && (
-                  <li>
-                    <button
-                      onClick={() => setView('admin')}
-                      className={`font-semibold text-lg hover:text-green-700 transition duration-300 ${view === 'admin' ? 'text-green-700' : 'text-gray-700'}`}
-                    >
-                      Administração
-                    </button>
-                  </li>
-                )}
-                {!isAdmin && (
-                  <li>
-                    <button
-                      onClick={() => setShowLoginModal(true)}
-                      className="font-semibold text-lg text-gray-700 hover:text-green-700 transition duration-300"
-                    >
-                      Login Admin
-                    </button>
-                  </li>
-                )}
-                {isAdmin && (
-                  <li>
-                    <button
-                      onClick={handleLogout}
-                      className="font-semibold text-lg text-red-600 hover:text-red-800 transition duration-300"
-                    >
-                      Sair
-                    </button>
-                  </li>
-                )}
-              </ul>
-            </nav>
-          </div>
+            <div class="flex items-center gap-4">
+                 <div id="userInfo" class="text-right text-sm">
+                    <p>Carregando usuário...</p>
+                </div>
+                <button id="newBookingBtn" class="bg-brand-green hover:bg-opacity-90 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-transform transform hover:scale-105">
+                    + Agendar Sala
+                </button>
+            </div>
         </header>
 
-        {/* Conteúdo principal */}
-        <main className="flex-grow container mx-auto px-4 py-8">
-          {view === 'dashboard' && <Dashboard />}
-          {view === 'admin' && isAdmin && <AdminPanel />}
-          {view === 'admin' && !isAdmin && (
-            <div className="text-center text-red-500 text-xl mt-8">Acesso negado. Por favor, faça login como administrador.</div>
-          )}
-        </main>
-
-        {/* Modal de Login Admin */}
-        {showLoginModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-8 rounded-lg shadow-xl w-96">
-              <h2 className="text-2xl font-bold mb-6 text-center" style={{ color: colors.primaryGreen }}>Login do Administrador</h2>
-              <form onSubmit={(e) => {
-                e.preventDefault();
-                handleAdminLogin(e.target.password.value);
-              }}>
-                <div className="mb-4">
-                  <label htmlFor="password" className="block text-gray-700 text-sm font-bold mb-2">Senha:</label>
-                  <input
-                    type="password"
-                    id="password"
-                    name="password"
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                    required
-                  />
+        <main class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            
+            <!-- Coluna Esquerda: Admin e Informações -->
+            <aside id="adminPanel" class="lg:col-span-1 bg-white p-4 rounded-lg shadow-md hidden">
+                <h2 class="text-xl font-bold mb-4 text-brand-orange">Painel do Administrador</h2>
+                <div id="pendingRequests">
+                    <h3 class="font-semibold mb-2">Solicitações Pendentes</h3>
+                    <div id="pendingRequestsList" class="space-y-3 max-h-96 overflow-y-auto pr-2">
+                        <!-- Solicitações serão inseridas aqui -->
+                    </div>
                 </div>
-                {loginError && <p className="text-red-500 text-xs italic mb-4">{loginError}</p>}
-                <div className="flex items-center justify-between">
-                  <button
-                    type="submit"
-                    className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-300"
-                    style={{ backgroundColor: colors.primaryGreen }}
-                  >
-                    Entrar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowLoginModal(false)}
-                    className="bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-300"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* Rodapé */}
-        <footer className="bg-gray-800 text-white py-4 text-center" style={{ backgroundColor: colors.textDark }}>
-          <p>&copy; 2025 Cerradão. Todos os direitos reservados.</p>
-        </footer>
-      </div>
-    </DataContext.Provider>
-  );
-};
-
-// Componente Dashboard para usuários
-const Dashboard = () => {
-  const { userId, rooms, colors, meetings, addMeeting } = useContext(DataContext);
-  const [selectedRoom, setSelectedRoom] = useState(rooms[0].id);
-  const [meetingTitle, setMeetingTitle] = useState('');
-  const [meetingDate, setMeetingDate] = useState('');
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
-  const [requesterName, setRequesterName] = useState('');
-  const [formMessage, setFormMessage] = useState('');
-
-  const handleBookingSubmit = (e) => {
-    e.preventDefault();
-    setFormMessage('');
-
-    if (!selectedRoom || !meetingTitle || !meetingDate || !startTime || !endTime || !requesterName) {
-      setFormMessage('Por favor, preencha todos os campos.');
-      return;
-    }
-
-    const startDateTime = new Date(`${meetingDate}T${startTime}`);
-    const endDateTime = new Date(`${meetingDate}T${endTime}`);
-
-    if (startDateTime >= endDateTime) {
-      setFormMessage('A hora de início deve ser anterior à hora de término.');
-      return;
-    }
-
-    // Verifica sobreposição de agendamentos
-    const overlappingMeetings = meetings.filter(m =>
-      m.room === selectedRoom &&
-      m.status === 'approved' && // Apenas verifica com agendamentos aprovados
-      m.meetingDate === meetingDate &&
-      !(endDateTime <= new Date(`${m.meetingDate}T${m.startTime}`) || startDateTime >= new Date(`${m.meetingDate}T${m.endTime}`))
-    );
-
-    if (overlappingMeetings.length > 0) {
-      setFormMessage('Já existe um agendamento aprovado para esta sala neste horário.');
-      return;
-    }
-
-    const newMeeting = {
-      room: selectedRoom,
-      title: meetingTitle,
-      meetingDate: meetingDate,
-      startTime: startTime,
-      endTime: endTime,
-      requesterId: userId, // Usando o userId do contexto
-      requesterName: requesterName,
-      status: 'pending', // Status inicial
-      createdAt: new Date().toISOString(),
-    };
-
-    addMeeting(newMeeting);
-    setFormMessage('Agendamento solicitado com sucesso! Aguardando aprovação.');
-    // Limpa o formulário
-    setMeetingTitle('');
-    setMeetingDate('');
-    setStartTime('');
-    setEndTime('');
-    setRequesterName('');
-  };
-
-  // Função para formatar a data e hora para exibição
-  const formatDateTime = (date, time) => {
-    const dt = new Date(`${date}T${time}`);
-    return dt.toLocaleString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  // Filtrar agendamentos do usuário logado
-  const myMeetings = meetings.filter(m => m.requesterId === userId);
-
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-      {/* Formulário de Agendamento */}
-      <div className="bg-white p-8 rounded-lg shadow-md">
-        <h2 className="text-2xl font-bold mb-6" style={{ color: colors.primaryGreen }}>Agendar Nova Reunião</h2>
-        <form onSubmit={handleBookingSubmit}>
-          <div className="mb-4">
-            <label htmlFor="room" className="block text-gray-700 text-sm font-bold mb-2">Sala:</label>
-            <select
-              id="room"
-              className="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              value={selectedRoom}
-              onChange={(e) => setSelectedRoom(e.target.value)}
-              required
-            >
-              {rooms.map(room => (
-                <option key={room.id} value={room.id}>{room.name}</option>
-              ))}
-            </select>
-          </div>
-          <div className="mb-4">
-            <label htmlFor="title" className="block text-gray-700 text-sm font-bold mb-2">Título da Reunião:</label>
-            <input
-              type="text"
-              id="title"
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              value={meetingTitle}
-              onChange={(e) => setMeetingTitle(e.target.value)}
-              required
-            />
-          </div>
-          <div className="mb-4">
-            <label htmlFor="requesterName" className="block text-gray-700 text-sm font-bold mb-2">Seu Nome:</label>
-            <input
-              type="text"
-              id="requesterName"
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              value={requesterName}
-              onChange={(e) => setRequesterName(e.target.value)}
-              required
-            />
-          </div>
-          <div className="mb-4">
-            <label htmlFor="date" className="block text-gray-700 text-sm font-bold mb-2">Data:</label>
-            <input
-              type="date"
-              id="date"
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              value={meetingDate}
-              onChange={(e) => setMeetingDate(e.target.value)}
-              required
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <div>
-              <label htmlFor="startTime" className="block text-gray-700 text-sm font-bold mb-2">Hora Início:</label>
-              <input
-                type="time"
-                id="startTime"
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <label htmlFor="endTime" className="block text-gray-700 text-sm font-bold mb-2">Hora Fim:</label>
-              <input
-                type="time"
-                id="endTime"
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                required
-              />
-            </div>
-          </div>
-          {formMessage && (
-            <p className={`mb-4 text-center font-semibold ${formMessage.includes('sucesso') ? 'text-green-600' : 'text-red-600'}`}>
-              {formMessage}
-            </p>
-          )}
-          <button
-            type="submit"
-            className="w-full py-3 rounded-md font-bold text-white transition duration-300"
-            style={{ backgroundColor: colors.primaryGreen, hover: { backgroundColor: colors.lightGreen } }}
-          >
-            Solicitar Agendamento
-          </button>
-        </form>
-      </div>
-
-      {/* Meus Agendamentos */}
-      <div className="bg-white p-8 rounded-lg shadow-md">
-        <h2 className="text-2xl font-bold mb-6" style={{ color: colors.primaryGreen }}>Meus Agendamentos</h2>
-        {myMeetings.length === 0 ? (
-          <p className="text-gray-600">Você não tem agendamentos.</p>
-        ) : (
-          <ul className="space-y-4">
-            {myMeetings.map(meeting => (
-              <li key={meeting.id} className="border p-4 rounded-md flex justify-between items-center" style={{ borderColor: colors.borderGray }}>
-                <div>
-                  <p className="font-semibold text-lg">{meeting.title} - {rooms.find(r => r.id === meeting.room)?.name}</p>
-                  <p className="text-gray-600">
-                    {formatDateTime(meeting.meetingDate, meeting.startTime)} - {formatDateTime(meeting.meetingDate, meeting.endTime)}
-                  </p>
-                </div>
-                <span
-                  className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                    meeting.status === 'approved' ? 'bg-green-100' :
-                    meeting.status === 'pending' ? 'bg-yellow-100' : 'bg-red-100'
-                  }`}
-                  style={{
-                    color: meeting.status === 'approved' ? colors.statusApproved :
-                           meeting.status === 'pending' ? colors.statusPending : colors.statusRejected
-                  }}
-                >
-                  {meeting.status === 'approved' ? 'Aprovado' :
-                   meeting.status === 'pending' ? 'Pendente' : 'Rejeitado'}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      {/* Visualização de Todos os Agendamentos (Calendário Simples) */}
-      <div className="md:col-span-2 bg-white p-8 rounded-lg shadow-md mt-8">
-        <h2 className="text-2xl font-bold mb-6" style={{ color: colors.primaryGreen }}>Todos os Agendamentos</h2>
-        {meetings.length === 0 ? (
-          <p className="text-gray-600">Nenhum agendamento encontrado.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full bg-white rounded-lg overflow-hidden">
-              <thead className="bg-gray-100" style={{ backgroundColor: colors.borderGray }}>
-                <tr>
-                  <th className="py-3 px-4 text-left font-semibold text-gray-700">Sala</th>
-                  <th className="py-3 px-4 text-left font-semibold text-gray-700">Título</th>
-                  <th className="py-3 px-4 text-left font-semibold text-gray-700">Solicitante</th>
-                  <th className="py-3 px-4 text-left font-semibold text-gray-700">Início</th>
-                  <th className="py-3 px-4 text-left font-semibold text-gray-700">Fim</th>
-                  <th className="py-3 px-4 text-left font-semibold text-gray-700">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {meetings.map(meeting => (
-                  <tr key={meeting.id} className="border-b" style={{ borderColor: colors.borderGray }}>
-                    <td className="py-3 px-4">{rooms.find(r => r.id === meeting.room)?.name}</td>
-                    <td className="py-3 px-4">{meeting.title}</td>
-                    <td className="py-3 px-4">{meeting.requesterName}</td>
-                    <td className="py-3 px-4">{formatDateTime(meeting.meetingDate, meeting.startTime)}</td>
-                    <td className="py-3 px-4">{formatDateTime(meeting.meetingDate, meeting.endTime)}</td>
-                    <td
-                      className={`py-3 px-4 font-semibold ${
-                        meeting.status === 'approved' ? 'text-green-600' :
-                        meeting.status === 'pending' ? 'text-yellow-600' : 'text-red-600'
-                      }`}
-                      style={{
-                        color: meeting.status === 'approved' ? colors.statusApproved :
-                               meeting.status === 'pending' ? colors.statusPending : colors.statusRejected
-                      }}
-                    >
-                      {meeting.status === 'approved' ? 'Aprovado' :
-                       meeting.status === 'pending' ? 'Pendente' : 'Rejeitado'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// Componente do Painel Administrativo
-const AdminPanel = () => {
-  const { rooms, colors, meetings, updateMeeting, deleteMeeting } = useContext(DataContext);
-  const [message, setMessage] = useState('');
-
-  const updateMeetingStatus = (meetingId, newStatus) => {
-    setMessage('');
-    updateMeeting(meetingId, { status: newStatus });
-    setMessage(`Agendamento ${newStatus === 'approved' ? 'aprovado' : 'rejeitado'} com sucesso!`);
-  };
-
-  const handleDeleteMeeting = (meetingId) => {
-    setMessage('');
-    // Usar um modal de confirmação ao invés de alert()
-    if (window.confirm('Tem certeza que deseja excluir este agendamento?')) {
-      deleteMeeting(meetingId);
-      setMessage('Agendamento excluído com sucesso!');
-    }
-  };
-
-  // Função para formatar a data e hora para exibição
-  const formatDateTime = (date, time) => {
-    const dt = new Date(`${date}T${time}`);
-    return dt.toLocaleString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  return (
-    <div className="bg-white p-8 rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold mb-6" style={{ color: colors.primaryGreen }}>Painel Administrativo</h2>
-      {message && (
-        <p className={`mb-4 text-center font-semibold ${message.includes('sucesso') ? 'text-green-600' : 'text-red-600'}`}>
-          {message}
-        </p>
-      )}
-      {meetings.length === 0 ? (
-        <p className="text-gray-600">Nenhum agendamento para gerenciar.</p>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white rounded-lg overflow-hidden">
-            <thead className="bg-gray-100" style={{ backgroundColor: colors.borderGray }}>
-              <tr>
-                <th className="py-3 px-4 text-left font-semibold text-gray-700">Solicitante</th>
-                <th className="py-3 px-4 text-left font-semibold text-gray-700">Sala</th>
-                <th className="py-3 px-4 text-left font-semibold text-gray-700">Título</th>
-                <th className="py-3 px-4 text-left font-semibold text-gray-700">Início</th>
-                <th className="py-3 px-4 text-left font-semibold text-gray-700">Fim</th>
-                <th className="py-3 px-4 text-left font-semibold text-gray-700">Status</th>
-                <th className="py-3 px-4 text-left font-semibold text-gray-700">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {meetings.map(meeting => (
-                <tr key={meeting.id} className="border-b" style={{ borderColor: colors.borderGray }}>
-                  <td className="py-3 px-4">{meeting.requesterName}</td>
-                  <td className="py-3 px-4">{rooms.find(r => r.id === meeting.room)?.name}</td>
-                  <td className="py-3 px-4">{meeting.title}</td>
-                  <td className="py-3 px-4">{formatDateTime(meeting.meetingDate, meeting.startTime)}</td>
-                  <td className="py-3 px-4">{formatDateTime(meeting.meetingDate, meeting.endTime)}</td>
-                  <td
-                    className={`py-3 px-4 font-semibold ${
-                      meeting.status === 'approved' ? 'text-green-600' :
-                      meeting.status === 'pending' ? 'text-yellow-600' : 'text-red-600'
-                    }`}
-                    style={{
-                      color: meeting.status === 'approved' ? colors.statusApproved :
-                             meeting.status === 'pending' ? colors.statusPending : colors.statusRejected
-                    }}
-                  >
-                    {meeting.status === 'approved' ? 'Aprovado' :
-                     meeting.status === 'pending' ? 'Pendente' : 'Rejeitado'}
-                  </td>
-                  <td className="py-3 px-4 flex space-x-2">
-                    {meeting.status === 'pending' && (
-                      <>
-                        <button
-                          onClick={() => updateMeetingStatus(meeting.id, 'approved')}
-                          className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md text-sm transition duration-300"
-                          style={{ backgroundColor: colors.primaryGreen }}
-                        >
-                          Aprovar
-                        </button>
-                        <button
-                          onClick={() => updateMeetingStatus(meeting.id, 'rejected')}
-                          className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-md text-sm transition duration-300"
-                          style={{ backgroundColor: colors.secondaryOrange }}
-                        >
-                          Reprovar
-                        </button>
-                      </>
-                    )}
-                    <button
-                      onClick={() => handleDeleteMeeting(meeting.id)}
-                      className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-sm transition duration-300"
-                    >
-                      Excluir
+                 <div class="mt-6">
+                    <button id="exportCsvBtn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-transform transform hover:scale-105">
+                        Exportar para CSV
                     </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
-};
+                </div>
+            </aside>
 
-export default App;
+            <!-- Coluna Direita: Calendário -->
+            <div class="col-span-1 lg:col-span-3 bg-white p-6 rounded-lg shadow-lg">
+                <!-- Controles do Calendário -->
+                <div class="flex justify-between items-center mb-4">
+                    <button id="prevMonthBtn" class="p-2 rounded-full hover:bg-gray-100">&lt;</button>
+                    <h2 id="currentMonthYear" class="text-xl font-bold text-center"></h2>
+                    <button id="nextMonthBtn" class="p-2 rounded-full hover:bg-gray-100">&gt;</button>
+                </div>
+                
+                <!-- Grid do Calendário -->
+                <div class="calendar-grid border-t border-l border-gray-200">
+                    <!-- Cabeçalho dos dias da semana -->
+                    <div class="text-center font-bold p-2 border-r border-b bg-gray-50">Dom</div>
+                    <div class="text-center font-bold p-2 border-r border-b bg-gray-50">Seg</div>
+                    <div class="text-center font-bold p-2 border-r border-b bg-gray-50">Ter</div>
+                    <div class="text-center font-bold p-2 border-r border-b bg-gray-50">Qua</div>
+                    <div class="text-center font-bold p-2 border-r border-b bg-gray-50">Qui</div>
+                    <div class="text-center font-bold p-2 border-r border-b bg-gray-50">Sex</div>
+                    <div class="text-center font-bold p-2 border-r border-b bg-gray-50">Sáb</div>
+                    
+                    <!-- Dias do mês serão inseridos aqui -->
+                </div>
+                 <div id="calendarBody" class="calendar-grid"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal de Agendamento/Detalhes -->
+    <div id="bookingModal" class="modal fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 hidden pointer-events-none opacity-0">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-lg p-8 transform scale-95 transition-transform">
+            <h2 id="modalTitle" class="text-2xl font-bold mb-6">Novo Agendamento</h2>
+            <form id="bookingForm">
+                <input type="hidden" id="bookingId">
+                <div class="mb-4">
+                    <label for="title" class="block text-sm font-medium text-gray-700">Título da Reunião</label>
+                    <input type="text" id="title" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-green focus:border-brand-green" required>
+                </div>
+                <div class="mb-4">
+                    <label for="room" class="block text-sm font-medium text-gray-700">Sala</label>
+                    <select id="room" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-green focus:border-brand-green" required>
+                        <option value="Sala 01">Sala 01 (Grande - Treinamentos)</option>
+                        <option value="Sala 02">Sala 02 (Média - Antigo PCM)</option>
+                        <option value="Sala 03">Sala 03 (Pequena - Frente antigo PCM)</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label for="startDate" class="block text-sm font-medium text-gray-700">Data e Hora de Início</label>
+                        <input type="datetime-local" id="startDate" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-green focus:border-brand-green" required>
+                    </div>
+                    <div>
+                        <label for="endDate" class="block text-sm font-medium text-gray-700">Data e Hora de Fim</label>
+                        <input type="datetime-local" id="endDate" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-green focus:border-brand-green" required>
+                    </div>
+                </div>
+                 <div id="requesterInfo" class="mb-4 p-3 bg-gray-100 rounded-md hidden">
+                    <p class="text-sm"><span class="font-semibold">Solicitante:</span> <span id="requesterName"></span></p>
+                    <p class="text-sm"><span class="font-semibold">Status:</span> <span id="bookingStatus" class="font-bold"></span></p>
+                </div>
+                <div class="flex justify-end items-center gap-4 mt-8">
+                    <div id="adminActions" class="flex gap-2 hidden">
+                         <button type="button" id="approveBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg">Aprovar</button>
+                         <button type="button" id="rejectBtn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg">Reprovar</button>
+                         <button type="button" id="deleteBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg">Excluir</button>
+                    </div>
+                    <button type="button" id="cancelBtn" class="text-gray-600 hover:text-gray-900 font-medium py-2 px-4">Cancelar</button>
+                    <button type="submit" id="saveBtn" class="bg-brand-green hover:bg-opacity-90 text-white font-bold py-2 px-4 rounded-lg">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Toast de Notificação -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-gray-800 text-white py-3 px-6 rounded-lg shadow-lg opacity-0 transition-opacity duration-300">
+        <p id="toastMessage"></p>
+    </div>
+
+    <!-- Firebase -->
+    <script type="module">
+        // Importações do Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, doc, addDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        // --- CONFIGURAÇÃO ---
+        const firebaseConfig = typeof __firebase_config !== 'undefined' 
+            ? JSON.parse(__firebase_config) 
+            : { apiKey: "YOUR_API_KEY", authDomain: "YOUR_AUTH_DOMAIN", projectId: "YOUR_PROJECT_ID" }; // Fallback
+        
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-meeting-scheduler';
+
+        // ** IMPORTANTE: Defina o ID do usuário administrador aqui **
+        // Para testar como admin, você pode copiar seu User ID que aparece no topo da página e colar aqui.
+        const ADMIN_USER_ID = '05028253229485533911'; 
+
+        // --- INICIALIZAÇÃO DO FIREBASE ---
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // --- ESTADO DA APLICAÇÃO ---
+        let currentUser = null;
+        let isAdmin = false;
+        let currentDate = new Date();
+        let allBookings = [];
+
+        // --- ELEMENTOS DO DOM ---
+        const elements = {
+            userInfo: document.getElementById('userInfo'),
+            adminPanel: document.getElementById('adminPanel'),
+            pendingRequestsList: document.getElementById('pendingRequestsList'),
+            currentMonthYear: document.getElementById('currentMonthYear'),
+            calendarBody: document.getElementById('calendarBody'),
+            bookingModal: document.getElementById('bookingModal'),
+            bookingForm: document.getElementById('bookingForm'),
+            modalTitle: document.getElementById('modalTitle'),
+            bookingId: document.getElementById('bookingId'),
+            title: document.getElementById('title'),
+            room: document.getElementById('room'),
+            startDate: document.getElementById('startDate'),
+            endDate: document.getElementById('endDate'),
+            requesterInfo: document.getElementById('requesterInfo'),
+            requesterName: document.getElementById('requesterName'),
+            bookingStatus: document.getElementById('bookingStatus'),
+            adminActions: document.getElementById('adminActions'),
+            approveBtn: document.getElementById('approveBtn'),
+            rejectBtn: document.getElementById('rejectBtn'),
+            deleteBtn: document.getElementById('deleteBtn'),
+            saveBtn: document.getElementById('saveBtn'),
+            cancelBtn: document.getElementById('cancelBtn'),
+            newBookingBtn: document.getElementById('newBookingBtn'),
+            prevMonthBtn: document.getElementById('prevMonthBtn'),
+            nextMonthBtn: document.getElementById('nextMonthBtn'),
+            exportCsvBtn: document.getElementById('exportCsvBtn'),
+            toast: document.getElementById('toast'),
+            toastMessage: document.getElementById('toastMessage'),
+        };
+
+        // --- AUTENTICAÇÃO ---
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUser = user;
+                isAdmin = currentUser.uid === ADMIN_USER_ID;
+                updateUserInfo();
+                setupUIForRole();
+                await listenToBookings();
+            } else {
+                try {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                } catch (error) {
+                    console.error("Erro na autenticação:", error);
+                    elements.userInfo.innerHTML = `<p class="text-red-500">Falha na autenticação.</p>`;
+                }
+            }
+        });
+
+        function updateUserInfo() {
+            elements.userInfo.innerHTML = `
+                <p class="font-semibold">${isAdmin ? 'Administrador' : 'Usuário'}</p>
+                <p class="text-xs text-gray-500 truncate" title="${currentUser.uid}">ID: ${currentUser.uid}</p>
+            `;
+        }
+
+        function setupUIForRole() {
+            if (isAdmin) {
+                elements.adminPanel.classList.remove('hidden');
+            } else {
+                elements.adminPanel.classList.add('hidden');
+            }
+        }
+        
+        // --- LÓGICA DO CALENDÁRIO ---
+        function renderCalendar() {
+            elements.calendarBody.innerHTML = '';
+            currentDate.setDate(1);
+            const month = currentDate.getMonth();
+            const year = currentDate.getFullYear();
+
+            elements.currentMonthYear.textContent = `${currentDate.toLocaleString('pt-BR', { month: 'long' })} de ${year}`;
+
+            const firstDayOfMonth = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            // Preencher dias vazios no início
+            for (let i = 0; i < firstDayOfMonth; i++) {
+                elements.calendarBody.innerHTML += `<div class="calendar-day p-2 border-r border-b bg-gray-50"></div>`;
+            }
+
+            // Preencher os dias do mês
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayEl = document.createElement('div');
+                dayEl.className = 'calendar-day relative p-2 border-r border-b';
+                
+                const date = new Date(year, month, day);
+                if (isToday(date)) {
+                    dayEl.innerHTML = `<div class="absolute top-1 right-1 bg-brand-green text-white rounded-full h-6 w-6 flex items-center justify-center text-sm font-bold">${day}</div>`;
+                } else {
+                    dayEl.innerHTML = `<div class="text-sm">${day}</div>`;
+                }
+                
+                const dayBookingsContainer = document.createElement('div');
+                dayBookingsContainer.className = 'mt-6 space-y-1';
+                
+                const dayBookings = getBookingsForDay(date);
+                dayBookings.forEach(booking => {
+                    const bookingEl = createBookingElement(booking);
+                    dayBookingsContainer.appendChild(bookingEl);
+                });
+
+                dayEl.appendChild(dayBookingsContainer);
+                elements.calendarBody.appendChild(dayEl);
+            }
+        }
+
+        function getBookingsForDay(date) {
+            return allBookings
+                .filter(b => b.status !== 'rejected')
+                .filter(b => {
+                    const start = b.start.toDate();
+                    return start.getFullYear() === date.getFullYear() &&
+                           start.getMonth() === date.getMonth() &&
+                           start.getDate() === date.getDate();
+                })
+                .sort((a, b) => a.start.toDate() - b.start.toDate());
+        }
+
+        function createBookingElement(booking) {
+            const bookingEl = document.createElement('div');
+            const startTime = booking.start.toDate().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            bookingEl.className = `booking booking-${booking.room.toLowerCase().replace(/\s+/g, '-')} booking-${booking.status}`;
+            bookingEl.textContent = `${startTime} - ${booking.title}`;
+            bookingEl.title = `Sala: ${booking.room}\nStatus: ${booking.status}\nSolicitante: ${booking.requesterName || 'N/A'}`;
+            bookingEl.dataset.id = booking.id;
+            bookingEl.addEventListener('click', () => openBookingModal(booking));
+            return bookingEl;
+        }
+
+        function isToday(date) {
+            const today = new Date();
+            return date.getDate() === today.getDate() &&
+                   date.getMonth() === today.getMonth() &&
+                   date.getFullYear() === today.getFullYear();
+        }
+
+        elements.prevMonthBtn.addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            renderCalendar();
+        });
+
+        elements.nextMonthBtn.addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            renderCalendar();
+        });
+
+        // --- LÓGICA DO MODAL E FORMULÁRIO ---
+        function openBookingModal(booking = null) {
+            elements.bookingForm.reset();
+            elements.bookingId.value = '';
+            elements.requesterInfo.classList.add('hidden');
+            elements.adminActions.classList.add('hidden');
+            elements.saveBtn.classList.remove('hidden');
+
+            if (booking) {
+                // Visualizando/Editando agendamento existente
+                elements.modalTitle.textContent = 'Detalhes do Agendamento';
+                elements.bookingId.value = booking.id;
+                elements.title.value = booking.title;
+                elements.room.value = booking.room;
+                elements.startDate.value = formatDateTimeForInput(booking.start.toDate());
+                elements.endDate.value = formatDateTimeForInput(booking.end.toDate());
+                
+                elements.requesterInfo.classList.remove('hidden');
+                elements.requesterName.textContent = booking.requesterName || 'Desconhecido';
+                elements.bookingStatus.textContent = booking.status;
+                elements.bookingStatus.className = `font-bold text-${getStatusColor(booking.status)}-500`;
+
+                // Lógica de permissões
+                const canEdit = currentUser.uid === booking.requesterId && booking.status === 'pending';
+                const canAdminister = isAdmin;
+
+                elements.title.disabled = !canEdit && !canAdminister;
+                elements.room.disabled = !canEdit && !canAdminister;
+                elements.startDate.disabled = !canEdit && !canAdminister;
+                elements.endDate.disabled = !canEdit && !canAdminister;
+                elements.saveBtn.classList.toggle('hidden', !canEdit && !canAdminister);
+
+                if (canAdminister) {
+                    elements.adminActions.classList.remove('hidden');
+                    elements.approveBtn.classList.toggle('hidden', booking.status !== 'pending');
+                    elements.rejectBtn.classList.toggle('hidden', booking.status !== 'pending');
+                }
+
+            } else {
+                // Novo agendamento
+                elements.modalTitle.textContent = 'Novo Agendamento';
+                elements.title.disabled = false;
+                elements.room.disabled = false;
+                elements.startDate.disabled = false;
+                elements.endDate.disabled = false;
+            }
+
+            elements.bookingModal.classList.remove('hidden', 'pointer-events-none');
+            elements.bookingModal.classList.add('opacity-100');
+            elements.bookingModal.querySelector('div').classList.add('scale-100');
+        }
+
+        function closeBookingModal() {
+            elements.bookingModal.classList.add('opacity-0');
+            elements.bookingModal.querySelector('div').classList.remove('scale-100');
+            setTimeout(() => {
+                elements.bookingModal.classList.add('hidden', 'pointer-events-none');
+            }, 300);
+        }
+
+        function formatDateTimeForInput(date) {
+            const pad = (num) => num.toString().padStart(2, '0');
+            return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+        }
+        
+        function getStatusColor(status) {
+            switch(status) {
+                case 'approved': return 'green';
+                case 'pending': return 'yellow';
+                case 'rejected': return 'red';
+                default: return 'gray';
+            }
+        }
+
+        elements.newBookingBtn.addEventListener('click', () => openBookingModal());
+        elements.cancelBtn.addEventListener('click', closeBookingModal);
+
+        // --- OPERAÇÕES NO FIREBASE (CRUD) ---
+        const bookingsCol = collection(db, 'artifacts', appId, 'public', 'data', 'bookings');
+
+        async function listenToBookings() {
+            onSnapshot(bookingsCol, (snapshot) => {
+                allBookings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderCalendar();
+                if (isAdmin) {
+                    renderPendingRequests();
+                }
+            });
+        }
+
+        elements.bookingForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = elements.bookingId.value;
+            const start = new Date(elements.startDate.value);
+            const end = new Date(elements.endDate.value);
+
+            if (end <= start) {
+                showToast("A data de fim deve ser posterior à data de início.", "error");
+                return;
+            }
+            
+            if (hasConflict(start, end, elements.room.value, id)) {
+                showToast("Conflito de horário! Já existe uma reserva aprovada para esta sala neste período.", "error");
+                return;
+            }
+
+            const bookingData = {
+                title: elements.title.value,
+                room: elements.room.value,
+                start: Timestamp.fromDate(start),
+                end: Timestamp.fromDate(end),
+            };
+            
+            try {
+                if (id) { // Atualizar
+                    const docRef = doc(db, bookingsCol.path, id);
+                    await updateDoc(docRef, bookingData);
+                    showToast("Agendamento atualizado com sucesso!");
+                } else { // Criar
+                    bookingData.requesterId = currentUser.uid;
+                    bookingData.requesterName = currentUser.displayName || `Usuário ${currentUser.uid.substring(0, 5)}`;
+                    bookingData.status = 'pending';
+                    bookingData.createdAt = serverTimestamp();
+                    await addDoc(bookingsCol, bookingData);
+                    showToast("Solicitação de agendamento enviada!");
+                }
+                closeBookingModal();
+            } catch (error) {
+                console.error("Erro ao salvar agendamento:", error);
+                showToast("Ocorreu um erro ao salvar.", "error");
+            }
+        });
+        
+        function hasConflict(start, end, room, currentBookingId) {
+            const approvedBookings = allBookings.filter(b => 
+                b.status === 'approved' && 
+                b.room === room && 
+                b.id !== currentBookingId
+            );
+
+            for (const booking of approvedBookings) {
+                const bookingStart = booking.start.toDate();
+                const bookingEnd = booking.end.toDate();
+                // Verifica se há sobreposição
+                if (Math.max(start, bookingStart) < Math.min(end, bookingEnd)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        async function updateBookingStatus(id, status) {
+            const docRef = doc(db, bookingsCol.path, id);
+            try {
+                await updateDoc(docRef, { status });
+                showToast(`Agendamento ${status === 'approved' ? 'aprovado' : 'reprovado'}!`);
+                closeBookingModal();
+            } catch (error) {
+                console.error("Erro ao atualizar status:", error);
+                showToast("Erro ao atualizar status.", "error");
+            }
+        }
+        
+        async function deleteBooking(id) {
+            if (!confirm("Tem certeza que deseja excluir este agendamento? Esta ação não pode ser desfeita.")) {
+                return;
+            }
+            const docRef = doc(db, bookingsCol.path, id);
+            try {
+                await deleteDoc(docRef);
+                showToast("Agendamento excluído com sucesso.");
+                closeBookingModal();
+            } catch (error) {
+                console.error("Erro ao excluir agendamento:", error);
+                showToast("Erro ao excluir.", "error");
+            }
+        }
+
+        elements.approveBtn.addEventListener('click', () => {
+            const id = elements.bookingId.value;
+            const start = new Date(elements.startDate.value);
+            const end = new Date(elements.endDate.value);
+            const room = elements.room.value;
+            if (hasConflict(start, end, room, id)) {
+                showToast("Conflito de horário! Não é possível aprovar.", "error");
+                return;
+            }
+            updateBookingStatus(id, 'approved');
+        });
+        elements.rejectBtn.addEventListener('click', () => updateBookingStatus(elements.bookingId.value, 'rejected'));
+        elements.deleteBtn.addEventListener('click', () => deleteBooking(elements.bookingId.value));
+
+        // --- PAINEL DO ADMINISTRADOR ---
+        function renderPendingRequests() {
+            const pending = allBookings
+                .filter(b => b.status === 'pending')
+                .sort((a, b) => a.createdAt.toDate() - b.createdAt.toDate());
+            
+            elements.pendingRequestsList.innerHTML = '';
+            if (pending.length === 0) {
+                elements.pendingRequestsList.innerHTML = '<p class="text-sm text-gray-500">Nenhuma solicitação pendente.</p>';
+                return;
+            }
+            
+            pending.forEach(booking => {
+                const reqEl = document.createElement('div');
+                reqEl.className = 'p-3 border rounded-md bg-yellow-50 border-yellow-200 cursor-pointer hover:bg-yellow-100';
+                reqEl.addEventListener('click', () => openBookingModal(booking));
+                
+                const start = booking.start.toDate();
+                reqEl.innerHTML = `
+                    <p class="font-semibold text-sm">${booking.title}</p>
+                    <p class="text-xs text-gray-600">${booking.room}</p>
+                    <p class="text-xs text-gray-600">${start.toLocaleDateString('pt-BR')} ${start.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}</p>
+                `;
+                elements.pendingRequestsList.appendChild(reqEl);
+            });
+        }
+        
+        // --- EXPORTAR PARA CSV ---
+        elements.exportCsvBtn.addEventListener('click', () => {
+            const bookingsToExport = allBookings.filter(b => b.status === 'approved');
+            if (bookingsToExport.length === 0) {
+                showToast("Nenhum agendamento aprovado para exportar.", "info");
+                return;
+            }
+
+            const headers = ['ID', 'Titulo', 'Sala', 'Inicio', 'Fim', 'SolicitanteID', 'SolicitanteNome', 'Status'];
+            const rows = bookingsToExport.map(b => [
+                b.id,
+                b.title,
+                b.room,
+                b.start.toDate().toLocaleString('pt-BR'),
+                b.end.toDate().toLocaleString('pt-BR'),
+                b.requesterId,
+                b.requesterName,
+                b.status
+            ]);
+
+            let csvContent = "data:text/csv;charset=utf-8," 
+                + headers.join(",") + "\n" 
+                + rows.map(e => e.join(",")).join("\n");
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `agendamentos_cerradao_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+        // --- UTILITÁRIOS ---
+        function showToast(message, type = "success") {
+            elements.toastMessage.textContent = message;
+            elements.toast.classList.remove('bg-gray-800', 'bg-red-600', 'bg-blue-500');
+            switch(type) {
+                case 'error': elements.toast.classList.add('bg-red-600'); break;
+                case 'info': elements.toast.classList.add('bg-blue-500'); break;
+                default: elements.toast.classList.add('bg-gray-800'); break;
+            }
+            elements.toast.classList.add('opacity-100');
+            setTimeout(() => {
+                elements.toast.classList.remove('opacity-100');
+            }, 3000);
+        }
+
+        // --- INICIALIZAÇÃO ---
+        renderCalendar();
+
+    </script>
+</body>
+</html>
