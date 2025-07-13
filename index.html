@@ -75,38 +75,34 @@
 </head>
 <body class="text-gray-800">
 
-    <!-- Container Principal -->
     <div id="app" class="min-h-screen p-4 md:p-8">
         
-        <!-- Cabeçalho -->
         <header class="flex flex-col md:flex-row justify-between items-center mb-6 pb-4 border-b border-gray-200">
-    <div class="flex items-center gap-4 mb-4 md:mb-0">
-        <img src="logo-cerradao.png" alt="Logo Cerradão" style="height:100px;">
-    </div>
-    <h1 class="text-2xl md:text-3xl font-bold text-brand-green text-center flex-1">Agendamento de Salas de Reunião</h1>
-    <div class="flex items-center gap-4">
-        <div id="userInfo" class="text-right text-sm">
-            <p>Carregando...</p>
-        </div>
-        <button id="adminLoginBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg transition-colors">
-            Login Admin
-        </button>
-        <button id="newBookingBtn" class="bg-brand-green hover:bg-opacity-90 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-transform transform hover:scale-105">
-            + Agendar Sala
-        </button>
-    </div>
-</header>
+            <div class="flex items-center gap-4 mb-4 md:mb-0">
+                <img src="logo-cerradao.png" alt="Logo Cerradão" style="height:100px;">
+            </div>
+            <h1 class="text-2xl md:text-3xl font-bold text-brand-green text-center flex-1">Agendamento de Salas de Reunião</h1>
+            <div class="flex items-center gap-4">
+                <div id="userInfo" class="text-right text-sm">
+                    <p>Carregando...</p>
+                </div>
+                <button id="adminLoginBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg transition-colors">
+                    Login Admin
+                </button>
+                <button id="newBookingBtn" class="bg-brand-green hover:bg-opacity-90 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-transform transform hover:scale-105">
+                    + Agendar Sala
+                </button>
+            </div>
+        </header>
 
         <main class="grid grid-cols-1 lg:grid-cols-4 gap-8">
             
-            <!-- Coluna Esquerda: Admin e Informações -->
             <aside id="adminPanel" class="lg:col-span-1 bg-white p-4 rounded-lg shadow-md hidden">
                 <h2 class="text-xl font-bold mb-4 text-brand-orange">Painel do Administrador</h2>
                 <div id="pendingRequests">
                     <h3 class="font-semibold mb-2">Solicitações Pendentes</h3>
                     <div id="pendingRequestsList" class="space-y-3 max-h-96 overflow-y-auto pr-2">
-                        <!-- Solicitações serão inseridas aqui -->
-                    </div>
+                        </div>
                 </div>
                  <div class="mt-6">
                     <button id="exportCsvBtn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-transform transform hover:scale-105">
@@ -115,19 +111,15 @@
                 </div>
             </aside>
 
-            <!-- Coluna Direita: Calendário -->
             <div class="col-span-1 lg:col-span-4" id="calendarColumn">
                 <div class="bg-white p-6 rounded-lg shadow-lg">
-                    <!-- Controles do Calendário -->
                     <div class="flex justify-between items-center mb-4">
                         <button id="prevMonthBtn" class="p-2 rounded-full hover:bg-gray-100">&lt;</button>
                         <h2 id="currentMonthYear" class="text-xl font-bold text-center"></h2>
                         <button id="nextMonthBtn" class="p-2 rounded-full hover:bg-gray-100">&gt;</button>
                     </div>
                     
-                    <!-- Grid do Calendário -->
                     <div class="calendar-grid border-t border-l border-gray-200">
-                        <!-- Cabeçalho dos dias da semana -->
                         <div class="text-center font-bold p-2 border-r border-b bg-gray-50">Dom</div>
                         <div class="text-center font-bold p-2 border-r border-b bg-gray-50">Seg</div>
                         <div class="text-center font-bold p-2 border-r border-b bg-gray-50">Ter</div>
@@ -142,7 +134,6 @@
         </main>
     </div>
 
-    <!-- Modal de Login do Admin -->
     <div id="loginModal" class="modal fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 hidden pointer-events-none opacity-0">
         <div class="bg-white rounded-lg shadow-2xl w-full max-w-sm p-8 transform scale-95 transition-transform">
             <h2 class="text-2xl font-bold mb-6 text-center">Login do Administrador</h2>
@@ -163,7 +154,6 @@
         </div>
     </div>
 
-    <!-- Modal de Agendamento/Detalhes -->
     <div id="bookingModal" class="modal fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 hidden pointer-events-none opacity-0">
         <div class="bg-white rounded-lg shadow-2xl w-full max-w-lg p-8 transform scale-95 transition-transform">
             <h2 id="modalTitle" class="text-2xl font-bold mb-6">Novo Agendamento</h2>
@@ -219,12 +209,10 @@
         </div>
     </div>
     
-    <!-- Toast de Notificação -->
     <div id="toast" class="fixed bottom-5 right-5 bg-gray-800 text-white py-3 px-6 rounded-lg shadow-lg opacity-0 transition-opacity duration-300">
         <p id="toastMessage"></p>
     </div>
 
-    <!-- Firebase -->
     <script type="module">
         // Importações do Firebase
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -598,11 +586,19 @@
             const start = new Date(elements.startDate.value);
             const end = new Date(elements.endDate.value);
 
+            // Validação para garantir que a data de fim seja posterior à de início
             if (end <= start) {
                 showToast("A data de fim deve ser posterior à data de início.", "error");
                 return;
             }
             
+            // REGRA ADICIONADA: Bloqueia agendamentos que duram mais de um dia
+            if (start.toDateString() !== end.toDateString()) {
+                showToast("O agendamento deve começar e terminar no mesmo dia.", "error");
+                return;
+            }
+
+            // Validação de conflito de horário
             if (hasConflict(start, end, elements.room.value, id)) {
                 showToast("Conflito de horário! Já existe uma reserva aprovada para esta sala neste período.", "error");
                 return;
