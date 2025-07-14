@@ -28,7 +28,7 @@
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
         .calendar-day { min-height: 120px; transition: background-color: 0.2s; }
         .calendar-day:hover { background-color: #f0fdf4; }
-        
+
         .booking {
             font-size: 0.75rem;
             padding: 2px 6px;
@@ -53,7 +53,7 @@
         ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #aaa; }
         .modal { transition: opacity 0.3s ease; }
-        
+
         #app {
             display: none;
         }
@@ -113,8 +113,9 @@
         <main class="grid grid-cols-1 lg:grid-cols-4 gap-8">
             <aside id="adminPanel" class="lg:col-span-1 bg-white p-4 rounded-lg shadow-md hidden">
                 <h2 class="text-xl font-bold mb-4 text-brand-orange">Painel do Administrador</h2>
-                
+
                 <div id="bulkApproveArea" class="hidden">
+                    <h3 class="text-lg font-bold mb-3 text-gray-700">Solicitações Pendentes</h3>
                     <div class="mb-2 p-2 border-b">
                         <label class="flex items-center text-sm font-semibold">
                             <input type="checkbox" id="selectAllCheckbox" class="rounded border-gray-400 text-brand-green shadow-sm focus:ring-brand-green">
@@ -133,6 +134,23 @@
 
                 <div class="mt-6 border-t pt-4">
                     <button id="exportCsvBtn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">Exportar para CSV</button>
+                </div>
+
+                <div id="approvedManagementArea" class="mt-6 border-t pt-4 hidden">
+                    <h3 class="text-lg font-bold mb-3 text-gray-700">Gerenciar Aprovados</h3>
+                     <div class="mb-2 p-2 border-b">
+                        <label class="flex items-center text-sm font-semibold">
+                            <input type="checkbox" id="selectAllApprovedCheckbox" class="rounded border-gray-400 text-brand-green shadow-sm focus:ring-brand-green">
+                            <span class="ml-2">Selecionar Todos</span>
+                        </label>
+                    </div>
+                    <div id="approvedBookingsList" class="space-y-2 max-h-80 overflow-y-auto pr-2"></div>
+                    <div id="approvedActionsWrapper" class="hidden mt-4 space-y-2">
+                        <button id="bulkDeleteBtn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg">Excluir Selecionados</button>
+                    </div>
+                     <div id="noApprovedBookingsMessage" class="hidden">
+                        <p class="text-sm text-gray-500">Nenhum agendamento aprovado no momento.</p>
+                    </div>
                 </div>
             </aside>
             <div class="col-span-1 lg:col-span-4" id="calendarColumn">
@@ -293,6 +311,13 @@
             bulkActionsWrapper: document.getElementById('bulkActionsWrapper'),
             bulkApproveBtn: document.getElementById('bulkApproveBtn'),
             bulkRejectBtn: document.getElementById('bulkRejectBtn'),
+            // New elements for approved management
+            approvedManagementArea: document.getElementById('approvedManagementArea'),
+            selectAllApprovedCheckbox: document.getElementById('selectAllApprovedCheckbox'),
+            approvedBookingsList: document.getElementById('approvedBookingsList'),
+            approvedActionsWrapper: document.getElementById('approvedActionsWrapper'),
+            bulkDeleteBtn: document.getElementById('bulkDeleteBtn'),
+            noApprovedBookingsMessage: document.getElementById('noApprovedBookingsMessage'),
         };
 
         // --- FUNÇÕES DE INICIALIZAÇÃO E AUTENTICAÇÃO ---
@@ -320,7 +345,10 @@
                                 });
                             }
                             renderCalendar();
-                            if (isAdmin) renderPendingRequests();
+                            if (isAdmin) {
+                                renderPendingRequests();
+                                renderApprovedBookings(); // Render approved list
+                            }
                             isInitialLoad = false;
                         });
                     } else {
@@ -375,10 +403,15 @@
         }
 
         function setupUIForRole() {
+            const wasAdminPanelHidden = elements.adminPanel.classList.contains('hidden');
             elements.adminPanel.classList.toggle('hidden', !isAdmin);
             elements.calendarColumn.classList.toggle('lg:col-span-3', isAdmin);
             elements.calendarColumn.classList.toggle('lg:col-span-4', !isAdmin);
             elements.adminLoginBtn.classList.toggle('hidden', isAdmin);
+            if (isAdmin && wasAdminPanelHidden) {
+                renderPendingRequests();
+                renderApprovedBookings();
+            }
         }
 
         async function handleLogout() {
@@ -389,7 +422,7 @@
                 showToast("Erro ao tentar sair.", "error");
             }
         }
-        
+
         // --- FUNÇÕES DE RENDERIZAÇÃO ---
         function renderCalendar() {
             const calendarBody = document.getElementById('calendarBody');
@@ -480,7 +513,7 @@
             modal.querySelector('div').classList.add('scale-95');
             setTimeout(() => modal.classList.add('hidden', 'pointer-events-none'), 300);
         }
-        
+
         function openBookingModal(booking = null) {
             elements.bookingForm.reset();
             elements.bookingId.value = '';
@@ -552,23 +585,23 @@
         elements.bookingForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             if (!currentUser) return showToast("Aguardando autenticação.", "error");
-            
+
             const id = elements.bookingId.value;
             const start = new Date(elements.startDate.value);
             const end = new Date(elements.endDate.value);
 
             if (end <= start) return showToast("A data de fim deve ser posterior à de início.", "error");
             if (start.toDateString() !== end.toDateString()) return showToast("O agendamento deve começar e terminar no mesmo dia.", "error");
-            
+
             const bookingData = { title: elements.title.value, requesterName: elements.requesterNameInput.value, requesterEmail: elements.requesterEmailInput.value, room: elements.room.value, requesterId: currentUser.uid, status: 'pending', createdAt: serverTimestamp() };
-            
+
             if (elements.isRecurring.checked && !id) {
                 const frequency = document.getElementById('recurrenceFrequency').value;
                 const recurrenceEndDateValue = elements.recurrenceEndDate.value;
                 if (!recurrenceEndDateValue) return showToast("Por favor, selecione a data final da repetição.", "error");
                 const recurrenceEndDate = new Date(recurrenceEndDateValue);
                 if (recurrenceEndDate < start) return showToast("A data final da repetição deve ser após a data de início.", "error");
-                
+
                 const occurrences = [];
                 let currentDate = new Date(start.getTime());
                 const eventDuration = end.getTime() - start.getTime();
@@ -578,7 +611,7 @@
                     else if (frequency === 'weekly') currentDate.setDate(currentDate.getDate() + 7);
                     else if (frequency === 'monthly') currentDate.setMonth(currentDate.getMonth() + 1);
                 }
-                
+
                 for (const occ of occurrences) {
                     const hasConflict = allBookings.some(b => b.status === 'approved' && b.room === bookingData.room && Math.max(occ.start, b.start.toDate()) < Math.min(occ.end, b.end.toDate()));
                     if (hasConflict) return showToast(`Conflito de horário no dia ${occ.start.toLocaleDateString()}. Nenhum agendamento foi criado.`, "error");
@@ -600,7 +633,7 @@
             } else {
                 const hasConflict = allBookings.some(b => b.status === 'approved' && b.room === bookingData.room && b.id !== id && Math.max(start, b.start.toDate()) < Math.min(end, b.end.toDate()));
                 if (hasConflict) return showToast("Conflito de horário! Já existe uma reserva aprovada.", "error");
-                
+
                 try {
                     const bookingsCol = collection(db, 'artifacts', firebaseConfig.projectId, 'public', 'data', 'bookings');
                     if (id) {
@@ -643,7 +676,7 @@
 
         function renderPendingRequests() {
             const pending = allBookings.filter(b => b.status === 'pending').sort((a, b) => (a.createdAt?.toDate() || 0) - (b.createdAt?.toDate() || 0));
-            
+
             elements.bulkApproveArea.classList.toggle('hidden', pending.length === 0);
             elements.noPendingRequestsMessage.classList.toggle('hidden', pending.length > 0);
             elements.bulkActionsWrapper.classList.add('hidden');
@@ -661,7 +694,7 @@
                                 </div>
                             </div>`;
                 }).join('');
-                
+
                 elements.pendingRequestsList.querySelectorAll('div[data-id]').forEach(el => {
                     el.addEventListener('click', () => {
                         const booking = allBookings.find(b => b.id === el.dataset.id);
@@ -678,7 +711,7 @@
                 });
             }
         }
-        
+
         elements.selectAllCheckbox.addEventListener('change', (e) => {
             const isChecked = e.target.checked;
             elements.pendingRequestsList.querySelectorAll('.pending-checkbox').forEach(checkbox => {
@@ -693,7 +726,7 @@
 
             const bookingsToApprove = allBookings.filter(b => selectedIds.includes(b.id));
             const otherApprovedBookings = allBookings.filter(b => b.status === 'approved' && !selectedIds.includes(b.id));
-            
+
             for (let i = 0; i < bookingsToApprove.length; i++) {
                 const currentBooking = bookingsToApprove[i];
                 const start1 = currentBooking.start.toDate();
@@ -737,7 +770,80 @@
                 }
             }
         });
-        
+
+        function renderApprovedBookings() {
+            const approved = allBookings.filter(b => b.status === 'approved').sort((a, b) => (a.start?.toDate() || 0) - (b.start?.toDate() || 0));
+
+            elements.approvedManagementArea.classList.toggle('hidden', approved.length === 0 && !isAdmin);
+            elements.noApprovedBookingsMessage.classList.toggle('hidden', approved.length > 0);
+            elements.approvedActionsWrapper.classList.add('hidden');
+            elements.selectAllApprovedCheckbox.checked = false;
+
+            if (approved.length > 0) {
+                elements.approvedBookingsList.innerHTML = approved.map(booking => {
+                    const start = booking.start.toDate();
+                    return `<div class="p-2 border rounded-md bg-green-50 border-green-200 flex items-center gap-2">
+                                <input type="checkbox" class="approved-checkbox rounded border-gray-400 text-brand-green shadow-sm" data-id="${booking.id}">
+                                <div class="cursor-pointer flex-grow" data-id="${booking.id}">
+                                    <p class="font-semibold text-sm">${booking.title}</p>
+                                    <p class="text-xs text-gray-600">${booking.room}</p>
+                                    <p class="text-xs text-gray-600">${start.toLocaleDateString('pt-BR')} ${start.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}</p>
+                                </div>
+                            </div>`;
+                }).join('');
+
+                elements.approvedBookingsList.querySelectorAll('div[data-id]').forEach(el => {
+                    el.addEventListener('click', () => {
+                        const booking = allBookings.find(b => b.id === el.dataset.id);
+                        if(booking) openBookingModal(booking);
+                    });
+                });
+
+                const checkBoxes = [...elements.approvedBookingsList.querySelectorAll('.approved-checkbox')];
+                checkBoxes.forEach(checkbox => {
+                    checkbox.addEventListener('change', () => {
+                        const anyChecked = checkBoxes.some(c => c.checked);
+                        elements.approvedActionsWrapper.classList.toggle('hidden', !anyChecked);
+                        if (!checkbox.checked) {
+                            elements.selectAllApprovedCheckbox.checked = false;
+                        } else if (checkBoxes.every(c => c.checked)) {
+                            elements.selectAllApprovedCheckbox.checked = true;
+                        }
+                    });
+                });
+            } else {
+                elements.approvedBookingsList.innerHTML = '';
+            }
+        }
+
+        elements.selectAllApprovedCheckbox.addEventListener('change', (e) => {
+            const isChecked = e.target.checked;
+            elements.approvedBookingsList.querySelectorAll('.approved-checkbox').forEach(checkbox => {
+                checkbox.checked = isChecked;
+            });
+            elements.approvedActionsWrapper.classList.toggle('hidden', !isChecked || elements.approvedBookingsList.children.length === 0);
+        });
+
+        elements.bulkDeleteBtn.addEventListener('click', async () => {
+            const selectedIds = [...elements.approvedBookingsList.querySelectorAll('.approved-checkbox:checked')].map(c => c.dataset.id);
+            if (selectedIds.length === 0) return;
+
+            if (confirm(`Tem certeza que deseja EXCLUIR permanentemente os ${selectedIds.length} agendamentos aprovados selecionados? Esta ação não pode ser desfeita.`)) {
+                try {
+                    const batch = writeBatch(db);
+                    selectedIds.forEach(id => {
+                        const docRef = doc(db, 'artifacts', firebaseConfig.projectId, 'public', 'data', 'bookings', id);
+                        batch.delete(docRef);
+                    });
+                    await batch.commit();
+                    showToast(`${selectedIds.length} agendamentos excluídos com sucesso.`);
+                } catch (error) {
+                    console.error("Erro ao excluir agendamentos em lote:", error);
+                    showToast("Erro ao excluir agendamentos em lote.", "error");
+                }
+            }
+        });
+
         elements.exportCsvBtn.addEventListener('click', () => {
             const bookingsToExport = allBookings.filter(b => b.status === 'approved');
             if (bookingsToExport.length === 0) return showToast("Nenhum agendamento aprovado para exportar.", "info");
