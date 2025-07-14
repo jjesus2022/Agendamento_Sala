@@ -122,7 +122,10 @@
                         </label>
                     </div>
                     <div id="pendingRequestsList" class="space-y-2 max-h-80 overflow-y-auto pr-2"></div>
-                    <button id="bulkApproveBtn" class="hidden mt-4 w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg">Aprovar Selecionados</button>
+                    <div id="bulkActionsWrapper" class="hidden mt-4 space-y-2">
+                        <button id="bulkApproveBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg">Aprovar Selecionados</button>
+                        <button id="bulkRejectBtn" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-4 rounded-lg">Reprovar Selecionados</button>
+                    </div>
                 </div>
                 <div id="noPendingRequestsMessage" class="hidden">
                     <p class="text-sm text-gray-500">Nenhuma solicitação pendente.</p>
@@ -287,34 +290,12 @@
             bulkApproveArea: document.getElementById('bulkApproveArea'),
             noPendingRequestsMessage: document.getElementById('noPendingRequestsMessage'),
             selectAllCheckbox: document.getElementById('selectAllCheckbox'),
+            bulkActionsWrapper: document.getElementById('bulkActionsWrapper'),
             bulkApproveBtn: document.getElementById('bulkApproveBtn'),
+            bulkRejectBtn: document.getElementById('bulkRejectBtn'),
         };
 
-        function playNotificationSound() {
-            elements.notificationSound.currentTime = 0;
-            elements.notificationSound.play().catch(error => console.log("A reprodução de áudio foi bloqueada pelo navegador.", error));
-        }
-
-        function showDesktopNotification(title, body) {
-            if (document.hasFocus()) {
-                showToast(body, 'info');
-                playNotificationSound();
-                return;
-            }
-            if (!('Notification' in window)) return;
-            if (Notification.permission === "granted") {
-                new Notification(title, { body, icon: './logo-cerradao.png' });
-                playNotificationSound();
-            } else if (Notification.permission !== "denied") {
-                Notification.requestPermission().then(permission => {
-                    if (permission === "granted") {
-                        new Notification(title, { body, icon: './logo-cerradao.png' });
-                        playNotificationSound();
-                    }
-                });
-            }
-        }
-
+        // --- FUNÇÕES DE INICIALIZAÇÃO E AUTENTICAÇÃO ---
         async function initializeAppAndAuth() {
             try {
                 await setPersistence(auth, browserLocalPersistence);
@@ -356,6 +337,32 @@
             }
         }
 
+        // --- FUNÇÕES DE UI E HELPERS ---
+        function playNotificationSound() {
+            elements.notificationSound.currentTime = 0;
+            elements.notificationSound.play().catch(error => console.log("A reprodução de áudio foi bloqueada pelo navegador.", error));
+        }
+
+        function showDesktopNotification(title, body) {
+            if (document.hasFocus()) {
+                showToast(body, 'info');
+                playNotificationSound();
+                return;
+            }
+            if (!('Notification' in window)) return;
+            if (Notification.permission === "granted") {
+                new Notification(title, { body, icon: './logo-cerradao.png' });
+                playNotificationSound();
+            } else if (Notification.permission !== "denied") {
+                Notification.requestPermission().then(permission => {
+                    if (permission === "granted") {
+                        new Notification(title, { body, icon: './logo-cerradao.png' });
+                        playNotificationSound();
+                    }
+                });
+            }
+        }
+
         function updateUserInfo() {
             if (isAdmin) {
                 elements.userInfo.innerHTML = `<div><p class="font-semibold">${currentUser.email}</p><button id="logoutBtn" class="text-xs text-red-500 hover:underline">Sair</button></div>`;
@@ -383,6 +390,7 @@
             }
         }
         
+        // --- FUNÇÕES DE RENDERIZAÇÃO ---
         function renderCalendar() {
             const calendarBody = document.getElementById('calendarBody');
             calendarBody.innerHTML = '';
@@ -460,9 +468,7 @@
             return bookingEl;
         }
 
-        elements.prevMonthBtn.addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() - 1); renderCalendar(); });
-        elements.nextMonthBtn.addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() + 1); renderCalendar(); });
-
+        // --- FUNÇÕES DE MODAL E FORMULÁRIOS ---
         function openModal(modal) {
             modal.classList.remove('hidden', 'pointer-events-none');
             modal.classList.add('opacity-100');
@@ -474,20 +480,7 @@
             modal.querySelector('div').classList.add('scale-95');
             setTimeout(() => modal.classList.add('hidden', 'pointer-events-none'), 300);
         }
-
-        elements.adminLoginBtn.addEventListener('click', () => openModal(elements.loginModal));
-        elements.cancelLoginBtn.addEventListener('click', () => closeModal(elements.loginModal));
-        elements.loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            try {
-                await signInWithEmailAndPassword(auth, elements.email.value, elements.password.value);
-                closeModal(elements.loginModal);
-                showToast("Login de administrador bem-sucedido!");
-            } catch (error) {
-                showToast("Falha no login. Verifique suas credenciais.", "error");
-            }
-        });
-
+        
         function openBookingModal(booking = null) {
             elements.bookingForm.reset();
             elements.bookingId.value = '';
@@ -534,10 +527,26 @@
             openModal(elements.bookingModal);
         }
 
+        // --- EVENT LISTENERS ---
+        elements.prevMonthBtn.addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() - 1); renderCalendar(); });
+        elements.nextMonthBtn.addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() + 1); renderCalendar(); });
+        elements.adminLoginBtn.addEventListener('click', () => openModal(elements.loginModal));
+        elements.cancelLoginBtn.addEventListener('click', () => closeModal(elements.loginModal));
         elements.newBookingBtn.addEventListener('click', () => openBookingModal());
         elements.cancelBtn.addEventListener('click', () => closeModal(elements.bookingModal));
         elements.isRecurring.addEventListener('change', (e) => {
             elements.recurrenceOptions.classList.toggle('hidden', !e.target.checked);
+        });
+
+        elements.loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                await signInWithEmailAndPassword(auth, elements.email.value, elements.password.value);
+                closeModal(elements.loginModal);
+                showToast("Login de administrador bem-sucedido!");
+            } catch (error) {
+                showToast("Falha no login. Verifique suas credenciais.", "error");
+            }
         });
 
         elements.bookingForm.addEventListener('submit', async (e) => {
@@ -553,7 +562,7 @@
             
             const bookingData = { title: elements.title.value, requesterName: elements.requesterNameInput.value, requesterEmail: elements.requesterEmailInput.value, room: elements.room.value, requesterId: currentUser.uid, status: 'pending', createdAt: serverTimestamp() };
             
-            if (elements.isRecurring.checked) {
+            if (elements.isRecurring.checked && !id) {
                 const frequency = document.getElementById('recurrenceFrequency').value;
                 const recurrenceEndDateValue = elements.recurrenceEndDate.value;
                 if (!recurrenceEndDateValue) return showToast("Por favor, selecione a data final da repetição.", "error");
@@ -609,6 +618,7 @@
             }
         });
 
+        // --- FUNÇÕES DE ADMINISTRAÇÃO (CRUD e Lote) ---
         const updateBookingStatus = async (id, status) => {
             try {
                 await updateDoc(doc(db, 'artifacts', firebaseConfig.projectId, 'public', 'data', 'bookings', id), { status });
@@ -636,7 +646,7 @@
             
             elements.bulkApproveArea.classList.toggle('hidden', pending.length === 0);
             elements.noPendingRequestsMessage.classList.toggle('hidden', pending.length > 0);
-            elements.bulkApproveBtn.classList.add('hidden');
+            elements.bulkActionsWrapper.classList.add('hidden');
             elements.selectAllCheckbox.checked = false;
 
             if (pending.length > 0) {
@@ -659,20 +669,22 @@
                     });
                 });
 
-                elements.pendingRequestsList.querySelectorAll('.pending-checkbox').forEach(checkbox => {
+                const checkBoxes = [...elements.pendingRequestsList.querySelectorAll('.pending-checkbox')];
+                checkBoxes.forEach(checkbox => {
                     checkbox.addEventListener('change', () => {
-                        const anyChecked = [...elements.pendingRequestsList.querySelectorAll('.pending-checkbox')].some(c => c.checked);
-                        elements.bulkApproveBtn.classList.toggle('hidden', !anyChecked);
+                        const anyChecked = checkBoxes.some(c => c.checked);
+                        elements.bulkActionsWrapper.classList.toggle('hidden', !anyChecked);
                     });
                 });
             }
         }
         
         elements.selectAllCheckbox.addEventListener('change', (e) => {
+            const isChecked = e.target.checked;
             elements.pendingRequestsList.querySelectorAll('.pending-checkbox').forEach(checkbox => {
-                checkbox.checked = e.target.checked;
+                checkbox.checked = isChecked;
             });
-            elements.bulkApproveBtn.classList.toggle('hidden', !e.target.checked);
+            elements.bulkActionsWrapper.classList.toggle('hidden', !isChecked || elements.pendingRequestsList.children.length === 0);
         });
 
         elements.bulkApproveBtn.addEventListener('click', async () => {
@@ -682,28 +694,18 @@
             const bookingsToApprove = allBookings.filter(b => selectedIds.includes(b.id));
             const otherApprovedBookings = allBookings.filter(b => b.status === 'approved' && !selectedIds.includes(b.id));
             
-            // Validação de conflitos
             for (let i = 0; i < bookingsToApprove.length; i++) {
                 const currentBooking = bookingsToApprove[i];
                 const start1 = currentBooking.start.toDate();
                 const end1 = currentBooking.end.toDate();
-                
-                // Conflito com outros já aprovados
-                for (const approvedBooking of otherApprovedBookings) {
-                    if (currentBooking.room === approvedBooking.room && Math.max(start1, approvedBooking.start.toDate()) < Math.min(end1, approvedBooking.end.toDate())) {
-                        return showToast(`Conflito: "${currentBooking.title}" choca com um agendamento já aprovado.`, "error");
-                    }
-                }
-                // Conflito com outros na mesma seleção
-                for (let j = i + 1; j < bookingsToApprove.length; j++) {
-                    const otherSelectedBooking = bookingsToApprove[j];
-                    if (currentBooking.room === otherSelectedBooking.room && Math.max(start1, otherSelectedBooking.start.toDate()) < Math.min(end1, otherSelectedBooking.end.toDate())) {
-                        return showToast(`Conflito interno: "${currentBooking.title}" e "${otherSelectedBooking.title}" se sobrepõem.`, "error");
+                const checkList = [...otherApprovedBookings, ...bookingsToApprove.slice(i + 1)];
+                for (const existingBooking of checkList) {
+                    if (currentBooking.room === existingBooking.room && Math.max(start1, existingBooking.start.toDate()) < Math.min(end1, existingBooking.end.toDate())) {
+                        return showToast(`Conflito: "${currentBooking.title}" choca com "${existingBooking.title}".`, "error");
                     }
                 }
             }
 
-            // Se não houver conflitos, aprovar em lote
             try {
                 const batch = writeBatch(db);
                 selectedIds.forEach(id => {
@@ -714,6 +716,25 @@
                 showToast(`${selectedIds.length} agendamentos aprovados com sucesso!`);
             } catch (error) {
                 showToast("Erro ao aprovar agendamentos em lote.", "error");
+            }
+        });
+
+        elements.bulkRejectBtn.addEventListener('click', async () => {
+            const selectedIds = [...elements.pendingRequestsList.querySelectorAll('.pending-checkbox:checked')].map(c => c.dataset.id);
+            if (selectedIds.length === 0) return;
+
+            if (confirm(`Tem certeza que deseja reprovar os ${selectedIds.length} agendamentos selecionados?`)) {
+                try {
+                    const batch = writeBatch(db);
+                    selectedIds.forEach(id => {
+                        const docRef = doc(db, 'artifacts', firebaseConfig.projectId, 'public', 'data', 'bookings', id);
+                        batch.update(docRef, { status: 'rejected' });
+                    });
+                    await batch.commit();
+                    showToast(`${selectedIds.length} agendamentos reprovados.`);
+                } catch (error) {
+                    showToast("Erro ao reprovar agendamentos em lote.", "error");
+                }
             }
         });
         
